@@ -1,0 +1,16 @@
+dev:
+  hostname: localhost
+  port: 5432
+  dbname: toad
+  sslmode: disable
+  username: postgres
+  password: postgres
+  default_searchpath: public
+prod:
+  hostname: localhost
+  port: 5432
+  dbname: toad
+  sslmode: disable
+  username: postgres
+  password: postgres
+  default_searchpath: public
