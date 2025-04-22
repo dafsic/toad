@@ -42,7 +42,7 @@ type Kraken interface {
 	SubscribeTickers(socket *websocket.Socket, pairs ...string) error
 	SubscribeBalances(socket *websocket.Socket, token string) error
 	SubscribeExecutions(socket *websocket.Socket, token string) error
-	AddOrderWithWebsocket(socket *websocket.Socket, pair, token string, side Side, orderQty, price float64, userref int) error
+	AddOrderWithWebsocket(socket *websocket.Socket, pair, token, side string, orderQty, price float64, userref int) error
 	CancelOrderWithWebsocket(socket *websocket.Socket, token string, orderIDs []string) error
 }
 
@@ -139,8 +139,7 @@ func (api *krakenAPI) SubscribeExecutions(socket *websocket.Socket, token string
 
 func (api *krakenAPI) AddOrderWithWebsocket(
 	socket *websocket.Socket,
-	pair, token string,
-	side Side,
+	pair, token, side string,
 	orderQty, price float64,
 	userref int,
 ) error {

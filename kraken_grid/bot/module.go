@@ -6,7 +6,7 @@ import (
 	"go.uber.org/fx"
 )
 
-const ModuleName = "kraken_grid"
+const ModuleName = "bot"
 
 type Module struct{}
 

@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package kraken_grid;
+
+option go_package = ".;kraken_grid";
+
+service KrakenGridService {
+  rpc PlaceOrder(PlaceOrderRequest) returns (PlaceOrderResponse) {}
+  rpc SetBasePrice(SetBasePriceRequest) returns (SetBasePriceResponse) {}
+}
+
+message PlaceOrderRequest {
+  string side = 1;       // Order direction: "buy" or "sell"
+  int32 multiplier = 2;  // Price multiplier, used to calculate the actual price
+}
+
+message PlaceOrderResponse {
+  bool success = 1;      // Whether the operation was successful
+  string message = 2;    // Response message
+}
+
+message SetBasePriceRequest {
+  double base_price = 1; // Base price for the order
+}
+
+message SetBasePriceResponse {
+  bool success = 1;      // Whether the operation was successful
+  string message = 2;    // Response message
+}

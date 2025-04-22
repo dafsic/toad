@@ -15,7 +15,7 @@ type Config struct {
 	step         float64 // Step size for the grid
 	amount       float64 // Amount of BaseCoin per grid order
 	multipliers  []int   // Multipliers for the grid orders
-	centerPrice  float64 // Center price for the grid(optional, default is current price)
+	basePrice    float64 // Base price for the grid(optional, default is current price)
 	currentPrice float64 // Current price of the market
 	// If the current price stays above the base price plus step size for the full interval duration,
 	// the base price will be adjusted and orders will be rebalanced.
@@ -48,7 +48,7 @@ func WithGridAmount(amount float64) Option {
 
 func WithBasePrice(price float64) Option {
 	return func(c *Config) {
-		c.centerPrice = price
+		c.basePrice = price
 	}
 }
 

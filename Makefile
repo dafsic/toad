@@ -3,7 +3,6 @@ SHELL=/usr/bin/env bash
 PROJECT:=github.com/dafsic/toad
 
 BINDIR     := $(CURDIR)/bin
-BINNAME    ?= $(notdir $(PROJECT))
 GO_VERSION := $(shell go version)
 BUILD_TIME := $(shell date +%Y%m%d%H%M%S)
 #BUILD_TIME := $(shell date +%Y-%m-%dT%H:%M:%S%z)
@@ -34,45 +33,23 @@ default: check kraken_grid
 # --------------------------------------------------------------------------------
 # compile
 
-.PHONY: check kraken_grid
-
+.PHONY: check
 check: ## Check working tree is clean or not
 ifneq ($(shell git status -s),)
 	$(error You must run git commit)
 endif
 
-kraken_grid: $(BINDIR)/kraken_grid ## Compile the binary
-
-$(BINDIR)/kraken_grid: $(shell find ./kraken_grid -type f -name '*.go' -print) go.mod go.sum
-	CGO_ENABLED=$(CGO_ENABLED) go build -trimpath -ldflags "$(GO_LDFLAGS)" -o $(BINDIR)/kraken_grid ./kraken_grid/cmd
-
-# --------------------------------------------------------------------------------
-# test
-
-TESTFLAGS += -v
-#TESTFLAGS += -race
-
-.PHONY: test-unit
-test-unit: ## Run unit tests
+.PHONY: kraken_grid
+kraken_grid:  ## Compile kraken_grid
 	@echo
-	@echo "==> Running unit tests <=="
-	GO111MODULE=on go test $(TESTFLAGS) -run $(TESTS) $(PKG) 
+	@echo "==> Build kraken_grid <=="
+	@CGO_ENABLED=$(CGO_ENABLED) go build -trimpath -ldflags "$(GO_LDFLAGS)" -o $(BINDIR)/kraken_grid ./kraken_grid/cmd
 
-.PHONY: test-coverage
-test-coverage: ## Run unit tests with coverage
+.PHONY: proto
+proto: ## Generate proto files
 	@echo
-	@echo "==> Running unit tests with coverage <=="
-	@ ./scripts/coverage.sh
-
-# --------------------------------------------------------------------------------
-# clean
-
-.PHONY: clean
-clean: ## Remove previous build
-	@go clean
-	@rm -f $(BINDIR)/$(BINNAME)
-	@docker rmi `cat ./image.txt` &> /dev/null || true
-
+	@echo "==> Generating proto files <=="
+	@protoc --go_out=proto_go/kraken_grid --go-grpc_out=proto_go/kraken_grid  proto/kraken_grid/server.proto
 
 # --------------------------------------------------------------------------------
 # help
