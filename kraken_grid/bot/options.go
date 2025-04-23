@@ -9,7 +9,6 @@ import (
 )
 
 type Config struct {
-	name         string
 	baseCoin     string  // Base coin for the grid
 	quoteCoin    string  // Quote coin for the grid
 	step         float64 // Step size for the grid
@@ -27,12 +26,6 @@ type Config struct {
 }
 
 type Option func(*Config)
-
-func WithBotName(name string) Option {
-	return func(c *Config) {
-		c.name = name
-	}
-}
 
 func WithSetp(step float64) Option {
 	return func(c *Config) {
@@ -66,8 +59,8 @@ func WithQuoteCoin(coin string) Option {
 
 func WithMultipliers(multipliers string) Option {
 	return func(c *Config) {
-		multipliersList := strings.Split(multipliers, ",")
-		for _, multiplier := range multipliersList {
+		multipliersList := strings.SplitSeq(multipliers, ",")
+		for multiplier := range multipliersList {
 			m, err := strconv.Atoi(multiplier)
 			if err != nil || m <= 0 {
 				continue
@@ -85,12 +78,11 @@ func WithInterval(interval int64) Option {
 
 func NewConfig(opts ...Option) *Config {
 	cfg := &Config{
-		name:        "XMR/BTC",
 		step:        0.00005,
 		amount:      1,
 		baseCoin:    "XMR",
 		quoteCoin:   "BTC",
-		multipliers: []int{1, 2, 4},
+		multipliers: []int{1, 2, 5},
 		interval:    600,
 	}
 	for _, opt := range opts {

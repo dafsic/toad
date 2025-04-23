@@ -9,7 +9,7 @@ import (
 	"github.com/dafsic/toad/utils"
 )
 
-func (b *Grid) PlaceOrder(order *model.Order) {
+func (b *GridBot) PlaceOrder(order *model.Order) {
 	err := b.dao.CreateOrder(context.TODO(), order)
 	if err != nil {
 		b.stopChan <- fmt.Errorf("failed to create order in database: %w", err)
@@ -30,19 +30,19 @@ func (b *Grid) PlaceOrder(order *model.Order) {
 	}
 }
 
-func (b *Grid) NewBuyOrder(basePrice float64, multiplier int) *model.Order {
+func (b *GridBot) NewBuyOrder(basePrice float64, multiplier int) *model.Order {
 	price := basePrice - (b.config.step * float64(multiplier))
 	return b.newOrder(OrderBuy, price, multiplier)
 }
 
-func (b *Grid) NewSellOrder(basePrice float64, multiplier int) *model.Order {
+func (b *GridBot) NewSellOrder(basePrice float64, multiplier int) *model.Order {
 	price := basePrice + (b.config.step * float64(multiplier))
 	return b.newOrder(OrderSell, price, multiplier)
 }
 
-func (b *Grid) rebaseOrders() {
+func (b *GridBot) rebaseOrders() {
 	// cancel all orders
-	orders, err := b.dao.GetOpenOrders(context.TODO(), b.config.name)
+	orders, err := b.dao.GetOpenOrders(context.TODO(), b.Pair())
 	if err != nil && err != dao.ErrNotFound {
 		b.stopChan <- fmt.Errorf("failed to get open orders from database: %w", err)
 		return
@@ -69,9 +69,9 @@ func (b *Grid) rebaseOrders() {
 	}
 }
 
-func (b *Grid) newOrder(side string, price float64, multiplier int) *model.Order {
+func (b *GridBot) newOrder(side string, price float64, multiplier int) *model.Order {
 	return &model.Order{
-		Bot:        b.config.name,
+		Bot:        b.Pair(),
 		Exchange:   "kraken",
 		Pair:       b.config.baseCoin + "/" + b.config.quoteCoin,
 		Price:      utils.FormatFloat(price, 6),

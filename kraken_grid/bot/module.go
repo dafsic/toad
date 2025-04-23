@@ -6,16 +6,19 @@ import (
 	"go.uber.org/fx"
 )
 
-const ModuleName = "bot"
-
 type Module struct{}
 
 func (m *Module) Configure(app *cli.App) {
 	app.Flags = append(app.Flags,
 		&cli.StringFlag{
-			Name:    "bot_name",
-			EnvVars: []string{"BOT_NAME"},
-			Value:   "XMR/BTC",
+			Name:    "base_coin",
+			EnvVars: []string{"BASE_COIN"},
+			Value:   "XMR",
+		},
+		&cli.StringFlag{
+			Name:    "quote_coin",
+			EnvVars: []string{"QUOTE_COIN"},
+			Value:   "BTC",
 		},
 		&cli.Float64Flag{
 			Name:    "grid_step",
@@ -36,17 +39,32 @@ func (m *Module) Configure(app *cli.App) {
 }
 
 func (m *Module) Install(ctx *cli.Context) fx.Option {
-	return fx.Module(ModuleName,
-		fx.Supply(
-			fx.Annotate(WithBotName(ctx.String("bot_name")), fx.ResultTags(`group:"options"`)),
-			fx.Annotate(WithSetp(ctx.Float64("grid_step")), fx.ResultTags(`group:"options"`)),
-			fx.Annotate(WithGridAmount(ctx.Float64("grid_amount")), fx.ResultTags(`group:"options"`)),
-			fx.Annotate(WithBasePrice(ctx.Float64("base_price")), fx.ResultTags(`group:"options"`)),
-		),
+	var options []fx.Option
+	if ctx.IsSet("base_coin") {
+		options = append(options, fx.Supply(fx.Annotate(WithBaseCoin(ctx.String("base_coin")), fx.ResultTags(`group:"options"`))))
+	}
+	if ctx.IsSet("quote_coin") {
+		options = append(options, fx.Supply(fx.Annotate(WithQuoteCoin(ctx.String("quote_coin")), fx.ResultTags(`group:"options"`))))
+	}
+	if ctx.IsSet("grid_step") {
+		options = append(options, fx.Supply(fx.Annotate(WithSetp(ctx.Float64("grid_step")), fx.ResultTags(`group:"options"`))))
+	}
+	if ctx.IsSet("grid_amount") {
+		options = append(options, fx.Supply(fx.Annotate(WithGridAmount(ctx.Float64("grid_amount")), fx.ResultTags(`group:"options"`))))
+	}
+	if ctx.IsSet("base_price") {
+		options = append(options, fx.Supply(fx.Annotate(WithBasePrice(ctx.Float64("base_price")), fx.ResultTags(`group:"options"`))))
+	}
+	if ctx.IsSet("multipliers") {
+		options = append(options, fx.Supply(fx.Annotate(WithMultipliers(ctx.String("multipliers")), fx.ResultTags(`group:"options"`))))
+	}
+	options = append(options,
 		fx.Provide(fx.Annotate(NewConfig, fx.ParamTags(`group:"options"`))),
 		fx.Provide(fx.Annotate(NewBot, fx.As(new(Bot)))),
 		fx.Invoke(RunBot),
 	)
+
+	return fx.Module("bot", options...)
 }
 
 func RunBot(bot Bot, lc fx.Lifecycle) {

@@ -23,11 +23,11 @@ const (
 )
 
 type Bot interface {
-	Name() string
 	Stop()
 	Run() error
 	Status() (string, error)
 	Err() error
+	Pair() string
 	GetBasePrice() float64
 	SetBasePrice(new float64)
 	PlaceOrder(order *model.Order)
@@ -35,7 +35,7 @@ type Bot interface {
 	NewSellOrder(basePrice float64, multiplier int) *model.Order
 }
 
-type Grid struct {
+type GridBot struct {
 	status *atomic.Int32
 	config *Config
 	logger *zap.Logger
@@ -52,11 +52,11 @@ type Grid struct {
 	err      error
 }
 
-var _ Bot = (*Grid)(nil)
+var _ Bot = (*GridBot)(nil)
 
 // NewBot creates a new bot
-func NewBot(logger *zap.Logger, config *Config, krakenAPI kraken.Kraken, dao dao.Dao) *Grid {
-	return &Grid{
+func NewBot(logger *zap.Logger, config *Config, krakenAPI kraken.Kraken, dao dao.Dao) *GridBot {
+	return &GridBot{
 		status:    new(atomic.Int32),
 		config:    config,
 		logger:    logger,
@@ -66,11 +66,11 @@ func NewBot(logger *zap.Logger, config *Config, krakenAPI kraken.Kraken, dao dao
 	}
 }
 
-func (b *Grid) Name() string {
-	return b.config.name
+func (b *GridBot) Pair() string {
+	return b.config.baseCoin + "/" + b.config.quoteCoin
 }
 
-func (b *Grid) Status() (string, error) {
+func (b *GridBot) Status() (string, error) {
 	status := b.status.Load()
 	if status == utils.On {
 		return StatusRunning, nil
@@ -83,32 +83,32 @@ func (b *Grid) Status() (string, error) {
 	}
 }
 
-func (b *Grid) Err() error {
+func (b *GridBot) Err() error {
 	return b.err
 }
 
-func (b *Grid) Run() error {
-	b.logger.Info("Starting bot...", zap.String("name", b.config.name))
+func (b *GridBot) Run() error {
+	b.logger.Info("Starting bot...", zap.String("name", b.Pair()))
 	utils.TurnOn(b.status)
 	go b.listenStop()
 	go b.mainloop()
 	return nil
 }
 
-func (b *Grid) Stop() {
+func (b *GridBot) Stop() {
 	b.stopChan <- errors.New("bot stopped by user")
 }
 
-func (b *Grid) listenStop() {
+func (b *GridBot) listenStop() {
 	err := <-b.stopChan
-	b.logger.Error("Stopping bot...", zap.String("name", b.config.name), zap.Error(err))
+	b.logger.Error("Stopping bot...", zap.String("name", b.Pair()), zap.Error(err))
 	utils.TurnOff(b.status)
 	b.privateWS.Close()
 	b.publicWS.Close()
 	close(b.stopChan)
 }
 
-func (b *Grid) mainloop() {
+func (b *GridBot) mainloop() {
 	b.logger.Info("Starting main loop...")
 
 	// Get websocket token
@@ -124,7 +124,7 @@ func (b *Grid) mainloop() {
 	b.privateWS = b.newSocket(kraken.PrivateWSURL)
 
 	// Subscribe to necessary channels
-	if err := b.krakenAPI.SubscribeTickers(b.publicWS, b.config.baseCoin+"/"+b.config.quoteCoin); err != nil {
+	if err := b.krakenAPI.SubscribeTickers(b.publicWS, b.Pair()); err != nil {
 		b.stopChan <- err
 		return
 	}
@@ -134,10 +134,10 @@ func (b *Grid) mainloop() {
 	}
 }
 
-func (b *Grid) GetBasePrice() float64 {
+func (b *GridBot) GetBasePrice() float64 {
 	return math.Float64frombits(atomic.LoadUint64((*uint64)(unsafe.Pointer(&b.config.basePrice))))
 }
 
-func (b *Grid) SetBasePrice(new float64) {
+func (b *GridBot) SetBasePrice(new float64) {
 	atomic.StoreUint64((*uint64)(unsafe.Pointer(&b.config.basePrice)), math.Float64bits(new))
 }

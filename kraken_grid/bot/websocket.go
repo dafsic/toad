@@ -13,11 +13,11 @@ import (
 	"go.uber.org/zap"
 )
 
-func (b *Grid) OnBinaryMessage(data []byte, socket *websocket.Socket) {
+func (b *GridBot) OnBinaryMessage(data []byte, socket *websocket.Socket) {
 	b.logger.Info("WebSocket binary message received", zap.ByteString("message", data))
 }
 
-func (b *Grid) OnTextMessage(data string, socket *websocket.Socket) {
+func (b *GridBot) OnTextMessage(data string, socket *websocket.Socket) {
 	// b.logger.Info("WebSocket text message received", zap.String("message", data), zap.String("url", socket.Url))
 	var message any
 	err := json.Unmarshal(utils.StringToBytes(data), &message)
@@ -44,7 +44,7 @@ func (b *Grid) OnTextMessage(data string, socket *websocket.Socket) {
 	}
 }
 
-func (b *Grid) newSocket(url string) *websocket.Socket {
+func (b *GridBot) newSocket(url string) *websocket.Socket {
 	socket := websocket.New(url, b.logger)
 	socket.OnPingReceived = func(appData string, s *websocket.Socket) {
 		b.logger.Info("WebSocket ping received", zap.String("url", s.Url), zap.String("data", appData))
@@ -63,7 +63,7 @@ func (b *Grid) newSocket(url string) *websocket.Socket {
 	return socket
 }
 
-func (b *Grid) handleMapMessage(message map[string]any) {
+func (b *GridBot) handleMapMessage(message map[string]any) {
 	if message["method"] != nil {
 		switch message["method"] {
 		case "add_order", "cannel_order", "subscribe":
@@ -88,7 +88,7 @@ func (b *Grid) handleMapMessage(message map[string]any) {
 	}
 }
 
-func (b *Grid) handleMethodResponse(message map[string]any) {
+func (b *GridBot) handleMethodResponse(message map[string]any) {
 	b.logger.Info("WebSocket method response", zap.Any("method", message["method"]), zap.Any("result", message["result"]), zap.Bool("success", message["success"].(bool)))
 	if success, ok := message["success"].(bool); !ok || !success {
 		b.stopChan <- errors.New("WebSocket method response not successful")
@@ -96,7 +96,7 @@ func (b *Grid) handleMethodResponse(message map[string]any) {
 	}
 }
 
-func (b *Grid) handleTickerChannel(message map[string]any) {
+func (b *GridBot) handleTickerChannel(message map[string]any) {
 	data, ok := message["data"].([]any)
 	if !ok || len(data) == 0 {
 		return
@@ -133,7 +133,7 @@ func (b *Grid) handleTickerChannel(message map[string]any) {
 
 }
 
-func (b *Grid) handleExecutionsChannel(message map[string]any) {
+func (b *GridBot) handleExecutionsChannel(message map[string]any) {
 	data, ok := message["data"].([]any)
 	if !ok {
 		return
@@ -172,7 +172,7 @@ func (b *Grid) handleExecutionsChannel(message map[string]any) {
 	}
 }
 
-func (b *Grid) handleOrderFilled(order *model.Order) {
+func (b *GridBot) handleOrderFilled(order *model.Order) {
 	var newOrder *model.Order
 	if order.Side == OrderBuy {
 		newOrder = b.NewSellOrder(order.Price, order.Multiplier)
