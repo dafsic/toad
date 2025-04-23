@@ -153,6 +153,11 @@ func (api *krakenAPI) AddOrderWithWebsocket(
 			"symbol":        pair,
 			"token":         token,
 			"order_userref": userref,
+			// Post only" refers to a special order execution instruction that ensures your order
+			// is only placed on the order book as a "maker" order (adding liquidity)
+			// and will be automatically canceled if it would execute immediately as a "taker" order
+			// (removing liquidity).
+			"post_only": true,
 		},
 	}
 
