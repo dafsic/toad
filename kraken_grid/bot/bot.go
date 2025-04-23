@@ -36,9 +36,10 @@ type Bot interface {
 }
 
 type GridBot struct {
-	status *atomic.Int32
-	config *Config
-	logger *zap.Logger
+	status    *atomic.Int32
+	logger    *zap.Logger
+	config    *Config
+	threshold float64
 	// orders
 	dao dao.Dao
 	// websockets
@@ -104,6 +105,10 @@ func (b *GridBot) Run() error {
 	b.logger.Info("Starting bot...", zap.String("pair", b.Pair()))
 	if len(b.config.multipliers) < 2 {
 		return errors.New("at least 2 multipliers are required")
+	}
+
+	for _, v := range b.config.multipliers[:len(b.config.multipliers)-1] {
+		b.threshold += b.config.step * float64(v)
 	}
 
 	utils.TurnOn(b.status)

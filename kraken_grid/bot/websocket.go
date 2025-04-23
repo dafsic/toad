@@ -120,7 +120,7 @@ func (b *GridBot) handleTickerChannel(message map[string]any) {
 	)
 
 	basePrice := b.GetBasePrice()
-	if math.Abs(b.config.currentPrice-basePrice) > float64(b.config.multipliers[len(b.config.multipliers)-2])*b.config.step {
+	if math.Abs(b.config.currentPrice-basePrice) > b.threshold {
 		b.logger.Info("Price exceeded threshold",
 			zap.Float64("current price", b.config.currentPrice),
 			zap.Float64("base price", basePrice),
