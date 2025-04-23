@@ -91,7 +91,11 @@ func (b *GridBot) handleMapMessage(message map[string]any) {
 func (b *GridBot) handleMethodResponse(message map[string]any) {
 	b.logger.Info("WebSocket method response", zap.Any("method", message["method"]), zap.Any("result", message["result"]), zap.Bool("success", message["success"].(bool)))
 	if success, ok := message["success"].(bool); !ok || !success {
-		b.stopChan <- errors.New("WebSocket method response not successful")
+		// b.stopChan <- errors.New("WebSocket method response not successful: " + message["method"].(string))
+		b.logger.Error("WebSocket method response not successful",
+			zap.String("method", message["method"].(string)),
+			zap.Any("result", message["result"]),
+		)
 		return
 	}
 }

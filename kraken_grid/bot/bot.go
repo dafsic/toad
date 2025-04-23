@@ -149,10 +149,6 @@ func (b *GridBot) mainloop() {
 		b.stopChan <- err
 		return
 	}
-
-	if b.config.basePrice > 0 {
-		go b.rebaseOrders()
-	}
 }
 
 func (b *GridBot) GetBasePrice() float64 {
