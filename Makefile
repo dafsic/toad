@@ -28,7 +28,7 @@ GO_LDFLAGS += -X '$(PROJECT)/app.version=$(GIT_TAG)'
 GO_LDFLAGS += -X '$(PROJECT)/app.git_tree_state=$(GIT_DIRTY)'
 
 .PHONY: default
-default: check kraken_grid
+default: check proto gateway kraken_grid
 
 # --------------------------------------------------------------------------------
 # compile
@@ -38,6 +38,12 @@ check: ## Check working tree is clean or not
 ifneq ($(shell git status -s),)
 	$(error You must run git commit)
 endif
+
+.PHONY: gateway
+gateway:  ## Compile gateway
+	@echo
+	@echo "==> Build gateway <=="
+	@CGO_ENABLED=$(CGO_ENABLED) go build -trimpath -ldflags "$(GO_LDFLAGS)" -o $(BINDIR)/gateway ./gateway/cmd
 
 .PHONY: kraken_grid
 kraken_grid:  ## Compile kraken_grid

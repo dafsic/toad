@@ -52,21 +52,15 @@ func NewGinServer(logger *zap.Logger, clients ...client.GrpcClient) *GinServer {
 
 // setupRoutes configures HTTP routes
 func (s *GinServer) setupRoutes() {
-	// Add health check route
 	s.router.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
 		})
 	})
 
-	// Create API group
 	api := s.router.Group("/api/v1")
 	{
-		// Kraken Grid trading API
-		krakenGrid := api.Group("/kraken-grid")
-		{
-			krakenGrid.POST("/orders", s.placeOrder)
-		}
+		api.POST("/orders", s.placeOrder)
 	}
 }
 
