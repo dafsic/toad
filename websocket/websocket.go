@@ -1,3 +1,4 @@
+// refer: https://github.com/sacOO7/GoWebsocket/blob/master/gowebsocket.go
 package websocket
 
 import (
@@ -7,6 +8,7 @@ import (
 	"net/url"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -23,8 +25,9 @@ type Socket struct {
 	OnBinaryMessage   func(data []byte, socket *Socket)
 	OnPingReceived    func(data string, socket *Socket)
 	OnPongReceived    func(data string, socket *Socket)
-	sendMu            *sync.Mutex // Prevent "concurrent write to websocket connection"
+	mux               *sync.Mutex // for locking the connection
 	logger            *zap.Logger
+	reconnectCounter  int
 }
 
 type ConnectionOptions struct {
@@ -43,7 +46,7 @@ func New(url string, l *zap.Logger) *Socket {
 			UseSSL:         true,
 		},
 		WebsocketDialer: &websocket.Dialer{},
-		sendMu:          &sync.Mutex{},
+		mux:             &sync.Mutex{},
 		logger:          l,
 	}
 }
@@ -59,12 +62,15 @@ func (socket *Socket) Connect() {
 	var err error
 	socket.setConnectionOptions()
 
+	socket.mux.Lock()
 	socket.Conn, _, err = socket.WebsocketDialer.Dial(socket.Url, socket.RequestHeader)
+	socket.mux.Unlock()
 	if err != nil {
 		socket.logger.Panic("WebSocket connection error", zap.String("url", socket.Url), zap.Error(err))
 		return
 	}
 
+	socket.reconnectCounter = 0
 	socket.logger.Info("Connected to server", zap.String("url", socket.Url))
 
 	if socket.OnConnected != nil {
@@ -120,16 +126,18 @@ func (socket *Socket) SendBinary(data []byte) error {
 }
 
 func (socket *Socket) send(messageType int, data []byte) error {
-	socket.sendMu.Lock()
+	socket.mux.Lock()
 	err := socket.Conn.WriteMessage(messageType, data)
-	socket.sendMu.Unlock()
+	socket.mux.Unlock()
 	return err
 }
 
 func (socket *Socket) Close() {
+	socket.mux.Lock()
 	if socket.Conn == nil {
 		return
 	}
+	socket.mux.Unlock()
 
 	err := socket.send(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	if err != nil {
@@ -148,13 +156,20 @@ func (socket *Socket) handleReadError(err error) {
 			return
 		}
 		socket.logger.Error("WebSocket read error, reconnecting...", zap.Error(err), zap.Int("code", e.Code))
-		socket.Connect()
+		socket.reconnect()
 
 	case *net.OpError:
 		socket.logger.Error("Network read error, reconnecting...", zap.Error(err), zap.String("op", e.Op), zap.String("net", e.Net))
-		socket.Connect()
+		socket.reconnect()
 	default:
 		socket.logger.Error("WebSocket read error, reconnecting...", zap.Error(err), zap.String("type", reflect.TypeOf(err).String()))
-		socket.Connect()
+		socket.reconnect()
 	}
+}
+
+func (socket *Socket) reconnect() {
+	socket.reconnectCounter++
+	socket.logger.Info("Reconnecting to server", zap.Int("attempt", socket.reconnectCounter))
+	time.Sleep(time.Duration(socket.reconnectCounter) * time.Second)
+	socket.Connect()
 }
