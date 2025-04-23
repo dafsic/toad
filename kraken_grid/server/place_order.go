@@ -23,6 +23,14 @@ func (s *server) PlaceOrder(ctx context.Context, req *pb.PlaceOrderRequest) (*pb
 		}, nil
 	}
 
+	if req.Multiplier <= 0 {
+		s.logger.Error("Invalid multiplier", zap.Int32("multiplier", req.Multiplier))
+		return &pb.PlaceOrderResponse{
+			Success: false,
+			Message: "Invalid multiplier: must be positive",
+		}, nil
+	}
+
 	err := s.api.PlaceOrder(req.Side, int(req.Multiplier))
 	if err != nil {
 		s.logger.Error("Failed to place order",

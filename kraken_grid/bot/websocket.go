@@ -173,11 +173,11 @@ func (b *GridBot) handleExecutionsChannel(message map[string]any) {
 }
 
 func (b *GridBot) handleOrderFilled(order *model.Order) {
-	var newOrder *model.Order
+	var price float64
 	if order.Side == OrderBuy {
-		newOrder = b.NewSellOrder(order.Price, order.Multiplier)
+		price = order.Price + b.config.step*float64(order.Multiplier)
 	} else {
-		newOrder = b.NewBuyOrder(order.Price, order.Multiplier)
+		price = order.Price - b.config.step*float64(order.Multiplier)
 	}
-	b.PlaceOrder(newOrder)
+	b.PlaceOrder(b.NewOrder(Opposite(order.Side), price, order.Multiplier))
 }

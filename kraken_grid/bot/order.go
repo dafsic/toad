@@ -30,16 +30,6 @@ func (b *GridBot) PlaceOrder(order *model.Order) {
 	}
 }
 
-func (b *GridBot) NewBuyOrder(basePrice float64, multiplier int) *model.Order {
-	price := basePrice - (b.config.step * float64(multiplier))
-	return b.newOrder(OrderBuy, price, multiplier)
-}
-
-func (b *GridBot) NewSellOrder(basePrice float64, multiplier int) *model.Order {
-	price := basePrice + (b.config.step * float64(multiplier))
-	return b.newOrder(OrderSell, price, multiplier)
-}
-
 func (b *GridBot) rebaseOrders() {
 	// cancel all orders
 	orders, err := b.dao.GetOpenOrders(context.TODO(), b.Pair())
@@ -63,13 +53,17 @@ func (b *GridBot) rebaseOrders() {
 
 	// place new orders
 	basePrice := b.GetBasePrice()
+	buyBasePrice := basePrice
+	sellBasePrice := basePrice
 	for _, v := range b.config.multipliers {
-		b.PlaceOrder(b.newOrder(OrderBuy, basePrice, v))
-		b.PlaceOrder(b.newOrder(OrderSell, basePrice, v))
+		buyBasePrice -= b.config.step * float64(v)
+		sellBasePrice += b.config.step * float64(v)
+		b.PlaceOrder(b.NewOrder(OrderBuy, buyBasePrice, v))
+		b.PlaceOrder(b.NewOrder(OrderSell, sellBasePrice, v))
 	}
 }
 
-func (b *GridBot) newOrder(side string, price float64, multiplier int) *model.Order {
+func (b *GridBot) NewOrder(side string, price float64, multiplier int) *model.Order {
 	return &model.Order{
 		Bot:        b.Pair(),
 		Exchange:   "kraken",

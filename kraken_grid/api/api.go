@@ -1,10 +1,7 @@
 package api
 
 import (
-	"fmt"
-
 	"github.com/dafsic/toad/kraken_grid/bot"
-	"github.com/dafsic/toad/kraken_grid/model"
 )
 
 type API interface {
@@ -30,19 +27,13 @@ func (a *api) Pair() string {
 }
 
 func (a *api) PlaceOrder(side string, multiplier int) error {
-	var order *model.Order
 	basePrice := a.bot.GetBasePrice()
-
+	price := basePrice + a.bot.GetStep()*float64(multiplier)
 	if side == bot.OrderBuy {
-		order = a.bot.NewBuyOrder(basePrice, multiplier)
+		price = basePrice + a.bot.GetStep()*float64(multiplier)
 	}
-	if side == bot.OrderSell {
-		order = a.bot.NewSellOrder(basePrice, multiplier)
-	}
-	if order == nil {
-		return fmt.Errorf("invalid order side: %s", side)
-	}
-	a.bot.PlaceOrder(order)
+
+	a.bot.PlaceOrder(a.bot.NewOrder(side, price, multiplier))
 	return nil
 }
 

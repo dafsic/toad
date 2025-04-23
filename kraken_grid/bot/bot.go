@@ -28,11 +28,11 @@ type Bot interface {
 	Status() (string, error)
 	Err() error
 	Pair() string
+	GetStep() float64
 	GetBasePrice() float64
 	SetBasePrice(new float64)
 	PlaceOrder(order *model.Order)
-	NewBuyOrder(basePrice float64, multiplier int) *model.Order
-	NewSellOrder(basePrice float64, multiplier int) *model.Order
+	NewOrder(side string, price float64, multiplier int) *model.Order
 }
 
 type GridBot struct {
@@ -54,6 +54,15 @@ type GridBot struct {
 
 var _ Bot = (*GridBot)(nil)
 
+func Opposite(side string) string {
+	if side == OrderBuy {
+		return "sell"
+	} else if side == OrderSell {
+		return "buy"
+	}
+	return ""
+}
+
 // NewBot creates a new bot
 func NewBot(logger *zap.Logger, config *Config, krakenAPI kraken.Kraken, dao dao.Dao) *GridBot {
 	return &GridBot{
@@ -68,6 +77,10 @@ func NewBot(logger *zap.Logger, config *Config, krakenAPI kraken.Kraken, dao dao
 
 func (b *GridBot) Pair() string {
 	return b.config.baseCoin + "/" + b.config.quoteCoin
+}
+
+func (b *GridBot) GetStep() float64 {
+	return b.config.step
 }
 
 func (b *GridBot) Status() (string, error) {
@@ -88,7 +101,11 @@ func (b *GridBot) Err() error {
 }
 
 func (b *GridBot) Run() error {
-	b.logger.Info("Starting bot...", zap.String("name", b.Pair()))
+	b.logger.Info("Starting bot...", zap.String("pair", b.Pair()))
+	if len(b.config.multipliers) < 2 {
+		return errors.New("at least 2 multipliers are required")
+	}
+
 	utils.TurnOn(b.status)
 	go b.listenStop()
 	go b.mainloop()
@@ -101,7 +118,7 @@ func (b *GridBot) Stop() {
 
 func (b *GridBot) listenStop() {
 	err := <-b.stopChan
-	b.logger.Error("Stopping bot...", zap.String("name", b.Pair()), zap.Error(err))
+	b.logger.Error("Stopping bot...", zap.String("pair", b.Pair()), zap.Error(err))
 	utils.TurnOff(b.status)
 	b.privateWS.Close()
 	b.publicWS.Close()
@@ -131,6 +148,10 @@ func (b *GridBot) mainloop() {
 	if err := b.krakenAPI.SubscribeExecutions(b.privateWS, b.token); err != nil {
 		b.stopChan <- err
 		return
+	}
+
+	if b.config.basePrice > 0 {
+		go b.rebaseOrders()
 	}
 }
 
