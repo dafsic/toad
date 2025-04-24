@@ -9,9 +9,10 @@ import (
 
 // PlaceOrderRequest is the structure for order request in HTTP requests
 type PlaceOrderRequest struct {
-	Bot        string `json:"bot" binding:"required"`
-	Side       string `json:"side" binding:"required"`
-	Multiplier int32  `json:"multiplier" binding:"required"`
+	Bot        string  `json:"bot" binding:"required"`
+	Side       string  `json:"side" binding:"required"`
+	Multiplier int32   `json:"multiplier" binding:"required"`
+	Price      float64 `json:"price" binding:"required"`
 }
 
 // PlaceOrderResponse is the structure for order results in HTTP responses
@@ -53,9 +54,16 @@ func (s *GinServer) placeOrder(c *gin.Context) {
 		return
 	}
 
-	client := s.clients[req.Bot]
-	// Call gRPC client to send request
-	success, message, err := client.PlaceOrder(c.Request.Context(), req.Side, req.Multiplier)
+	client, ok := s.clients[req.Bot]
+	if !ok {
+		c.JSON(http.StatusBadRequest, PlaceOrderResponse{
+			Success: false,
+			Message: "Invalid bot name: " + req.Bot,
+		})
+		return
+	}
+
+	success, message, err := client.PlaceOrder(c.Request.Context(), req.Side, req.Multiplier, req.Price)
 	if err != nil {
 		s.logger.Error("gRPC client error", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, PlaceOrderResponse{

@@ -31,7 +31,15 @@ func (s *server) PlaceOrder(ctx context.Context, req *pb.PlaceOrderRequest) (*pb
 		}, nil
 	}
 
-	err := s.api.PlaceOrder(req.Side, int(req.Multiplier))
+	if req.Price <= 0 {
+		s.logger.Error("Invalid price", zap.Float64("price", req.Price))
+		return &pb.PlaceOrderResponse{
+			Success: false,
+			Message: "Invalid price: must be positive",
+		}, nil
+	}
+
+	err := s.api.PlaceOrder(req.Side, int(req.Multiplier), req.Price)
 	if err != nil {
 		s.logger.Error("Failed to place order",
 			zap.String("side", req.Side),

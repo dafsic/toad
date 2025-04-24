@@ -39,7 +39,13 @@ func (m *GatewayModule) Configure(app *cli.App) {
 			Name:    "kraken_xmrbtc_addr",
 			EnvVars: []string{"KRAKEN_XMRBTC_ADDR"},
 			Value:   "localhost:50051",
-			Usage:   "kraken_XMRBTC gRPC server address",
+			Usage:   "Kraken_XMRBTC gRPC server address",
+		},
+		&cli.StringFlag{
+			Name:    "ogre_xmrbtc_addr",
+			EnvVars: []string{"OGRE_XMRBTC_ADDR"},
+			Value:   "localhost:50052",
+			Usage:   "Ogre_XMRBTC gRPC server address",
 		},
 	)
 }

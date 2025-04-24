@@ -25,6 +25,7 @@ type PlaceOrderRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Side          string                 `protobuf:"bytes,1,opt,name=side,proto3" json:"side,omitempty"`              // Order direction: "buy" or "sell"
 	Multiplier    int32                  `protobuf:"varint,2,opt,name=multiplier,proto3" json:"multiplier,omitempty"` // Price multiplier, used to calculate the actual price
+	Price         float64                `protobuf:"fixed64,3,opt,name=price,proto3" json:"price,omitempty"`          // Price at which to place the order
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -69,6 +70,13 @@ func (x *PlaceOrderRequest) GetSide() string {
 func (x *PlaceOrderRequest) GetMultiplier() int32 {
 	if x != nil {
 		return x.Multiplier
+	}
+	return 0
+}
+
+func (x *PlaceOrderRequest) GetPrice() float64 {
+	if x != nil {
+		return x.Price
 	}
 	return 0
 }
@@ -225,12 +233,13 @@ var File_proto_kraken_grid_server_proto protoreflect.FileDescriptor
 
 const file_proto_kraken_grid_server_proto_rawDesc = "" +
 	"\n" +
-	"\x1eproto/kraken_grid/server.proto\x12\vkraken_grid\"G\n" +
+	"\x1eproto/kraken_grid/server.proto\x12\vkraken_grid\"]\n" +
 	"\x11PlaceOrderRequest\x12\x12\n" +
 	"\x04side\x18\x01 \x01(\tR\x04side\x12\x1e\n" +
 	"\n" +
 	"multiplier\x18\x02 \x01(\x05R\n" +
-	"multiplier\"H\n" +
+	"multiplier\x12\x14\n" +
+	"\x05price\x18\x03 \x01(\x01R\x05price\"H\n" +
 	"\x12PlaceOrderResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"4\n" +

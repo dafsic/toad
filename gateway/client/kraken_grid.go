@@ -58,10 +58,11 @@ func (c *KrakenGridClient) Close() error {
 }
 
 // PlaceOrder sends an order request to the gRPC server
-func (c *KrakenGridClient) PlaceOrder(ctx context.Context, side string, multiplier int32) (bool, string, error) {
+func (c *KrakenGridClient) PlaceOrder(ctx context.Context, side string, multiplier int32, price float64) (bool, string, error) {
 	resp, err := c.grpcClient.PlaceOrder(ctx, &pb.PlaceOrderRequest{
 		Side:       side,
 		Multiplier: multiplier,
+		Price:      price,
 	})
 
 	if err != nil {

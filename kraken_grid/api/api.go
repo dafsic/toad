@@ -6,7 +6,7 @@ import (
 
 type API interface {
 	Pair() string
-	PlaceOrder(side string, multiplier int) error
+	PlaceOrder(side string, multiplier int, price float64) error
 	SetBasePrice(price float64)
 }
 
@@ -26,13 +26,7 @@ func (a *api) Pair() string {
 	return a.bot.Pair()
 }
 
-func (a *api) PlaceOrder(side string, multiplier int) error {
-	basePrice := a.bot.GetBasePrice()
-	price := basePrice + a.bot.GetStep()*float64(multiplier)
-	if side == bot.OrderBuy {
-		price = basePrice + a.bot.GetStep()*float64(multiplier)
-	}
-
+func (a *api) PlaceOrder(side string, multiplier int, price float64) error {
 	a.bot.PlaceOrder(a.bot.NewOrder(side, price, multiplier))
 	return nil
 }
