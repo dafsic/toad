@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/dafsic/toad/kraken_grid/model"
 	"github.com/dafsic/toad/utils"
+	"github.com/dafsic/toad/utils/pointer"
 	"github.com/dafsic/toad/websocket"
 	"go.uber.org/zap"
 )
@@ -153,22 +155,24 @@ func (b *GridBot) handleExecutionsChannel(message map[string]any) {
 			return
 		}
 
-		order.Status = exec["exec_type"].(string)
-		err = b.dao.UpdateOrder(context.TODO(), order.ID, map[string]any{"order_id": orderID, "order_status": order.Status}) // Update order in database
+		order.OrderID = pointer.Get(orderID)
+		order.UpdatedAt = pointer.Get(time.Now())
+		order.Status = pointer.Get(exec["exec_type"].(string))
+		err = b.dao.UpdateOrder(context.TODO(), order) // Update order in database
 		if err != nil {
 			b.stopChan <- fmt.Errorf("failed to update order[%s] in database: %w", orderID, err)
 			return
 		}
 		b.logger.Info("Order update",
-			zap.String("order_id", order.OrderID),
-			zap.String("status", order.Status),
-			zap.String("side", order.Side),
-			zap.Float64("price", order.Price),
-			zap.String("pair", order.Pair),
-			zap.Int("multiplier", order.Multiplier),
+			zap.String("order_id", *order.OrderID),
+			zap.String("status", *order.Status),
+			zap.String("side", *order.Side),
+			zap.Float64("price", *order.Price),
+			zap.String("pair", *order.Pair),
+			zap.Int("multiplier", *order.Multiplier),
 		)
 
-		switch order.Status {
+		switch *order.Status {
 		case "filled":
 			b.handleOrderFilled(order)
 		default: // "new", "cancelled", "pending"
@@ -178,10 +182,10 @@ func (b *GridBot) handleExecutionsChannel(message map[string]any) {
 
 func (b *GridBot) handleOrderFilled(order *model.Order) {
 	var price float64
-	if order.Side == OrderBuy {
-		price = order.Price + b.config.step*float64(order.Multiplier)
+	if *order.Side == OrderBuy {
+		price = *order.Price + b.config.step*float64(*order.Multiplier)
 	} else {
-		price = order.Price - b.config.step*float64(order.Multiplier)
+		price = *order.Price - b.config.step*float64(*order.Multiplier)
 	}
-	b.PlaceOrder(b.NewOrder(Opposite(order.Side), price, order.Multiplier))
+	b.PlaceOrder(b.NewOrder(Opposite(*order.Side), price, *order.Multiplier))
 }

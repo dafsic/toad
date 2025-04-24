@@ -41,21 +41,15 @@ endif
 
 .PHONY: gateway
 gateway:  ## Compile gateway
-	@echo
-	@echo "==> Build gateway <=="
-	@CGO_ENABLED=$(CGO_ENABLED) go build -trimpath -ldflags "$(GO_LDFLAGS)" -o $(BINDIR)/gateway ./gateway/cmd
+	CGO_ENABLED=$(CGO_ENABLED) go build -trimpath -ldflags "$(GO_LDFLAGS)" -o $(BINDIR)/gateway ./gateway/cmd
 
 .PHONY: kraken_grid
 kraken_grid:  ## Compile kraken_grid
-	@echo
-	@echo "==> Build kraken_grid <=="
-	@CGO_ENABLED=$(CGO_ENABLED) go build -trimpath -ldflags "$(GO_LDFLAGS)" -o $(BINDIR)/kraken_grid ./kraken_grid/cmd
+	CGO_ENABLED=$(CGO_ENABLED) go build -trimpath -ldflags "$(GO_LDFLAGS)" -o $(BINDIR)/kraken_grid ./kraken_grid/cmd
 
 .PHONY: proto
 proto: ## Generate proto files
-	@echo
-	@echo "==> Generating proto files <=="
-	@protoc --go_out=proto_go/kraken_grid --go-grpc_out=proto_go/kraken_grid  proto/kraken_grid/server.proto
+	protoc --go_out=proto_go/kraken_grid --go-grpc_out=proto_go/kraken_grid  proto/kraken_grid/server.proto
 
 # --------------------------------------------------------------------------------
 # help

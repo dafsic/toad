@@ -60,14 +60,14 @@ func (impl *DatabaseImpl) transact(ctx context.Context, txFunc func(tx *sqlx.Tx)
 			if rollbackErr != nil {
 				impl.logger.Error("error during rollback", zap.Error(rollbackErr))
 			}
-			panic(p) // re-throw panic after Rollback
+			panic(p)
 		} else if err != nil {
-			rollbackErr := tx.Rollback() // err is non-nil; don't change it
+			rollbackErr := tx.Rollback()
 			if rollbackErr != nil {
 				err = fmt.Errorf("error during rollback: %s: %w", rollbackErr, err)
 			}
 		} else {
-			err = tx.Commit() // err is nil; if Commit returns error update err
+			err = tx.Commit()
 		}
 	}()
 	err = txFunc(tx)

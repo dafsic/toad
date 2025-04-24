@@ -7,6 +7,7 @@ import (
 	"github.com/dafsic/toad/kraken_grid/dao"
 	"github.com/dafsic/toad/kraken_grid/model"
 	"github.com/dafsic/toad/utils"
+	"github.com/dafsic/toad/utils/pointer"
 )
 
 func (b *GridBot) PlaceOrder(order *model.Order) {
@@ -18,12 +19,12 @@ func (b *GridBot) PlaceOrder(order *model.Order) {
 
 	err = b.krakenAPI.AddOrderWithWebsocket(
 		b.privateWS,
-		order.Pair,
+		*order.Pair,
 		b.token,
-		order.Side,
-		order.Amount,
-		order.Price,
-		order.ID,
+		*order.Side,
+		*order.Amount,
+		*order.Price,
+		*order.ID,
 	)
 	if err != nil {
 		b.stopChan <- fmt.Errorf("failed to place new order: %w", err)
@@ -40,7 +41,7 @@ func (b *GridBot) rebaseOrders() {
 
 	orderIDs := make([]string, len(orders))
 	for i, order := range orders {
-		orderIDs[i] = order.OrderID
+		orderIDs[i] = *order.OrderID
 	}
 
 	if len(orders) > 0 {
@@ -65,13 +66,13 @@ func (b *GridBot) rebaseOrders() {
 
 func (b *GridBot) NewOrder(side string, price float64, multiplier int) *model.Order {
 	return &model.Order{
-		Bot:        b.Pair(),
-		Exchange:   "kraken",
-		Pair:       b.config.baseCoin + "/" + b.config.quoteCoin,
-		Price:      utils.FormatFloat(price, 6),
-		Amount:     b.config.amount,
-		Side:       side,
-		Multiplier: multiplier,
-		Status:     "pending",
+		Bot:        pointer.Get(b.Pair()),
+		Exchange:   pointer.Get("kraken"),
+		Pair:       pointer.Get(b.config.baseCoin + "/" + b.config.quoteCoin),
+		Price:      pointer.Get(utils.FormatFloat(price, 6)),
+		Amount:     pointer.Get(b.config.amount),
+		Side:       &side,
+		Multiplier: &multiplier,
+		Status:     pointer.Get("pending"),
 	}
 }

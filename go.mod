@@ -55,6 +55,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
 	github.com/rubenv/sql-migrate v1.7.2
+	github.com/samber/lo v1.49.1
 	github.com/urfave/cli/v2 v2.27.6
 	go.uber.org/multierr v1.10.0 // indirect
 )

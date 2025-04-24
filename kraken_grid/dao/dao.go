@@ -17,12 +17,10 @@ type Dao interface {
 	CreateOrder(ctx context.Context, order *model.Order) error
 	// GetOrder retrieves an order from the database by its OrderID
 	GetOrder(ctx context.Context, id int) (*model.Order, error)
-	// GetOrdersBybot retrieves all orders from the database for a specific bot
-	GetOrdersByBot(ctx context.Context, bot string) ([]*model.Order, error)
 	// GetOpenOrders retrieves all open orders from the database
 	GetOpenOrders(ctx context.Context, bot string) ([]*model.Order, error)
 	// UpdateOrder updates an existing order in the database
-	UpdateOrder(ctx context.Context, id int, fieldValueMap map[string]any) error
+	UpdateOrder(ctx context.Context, order *model.Order) error
 }
 
 type DaoImpl struct {
