@@ -4,12 +4,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type Level string
-
-func StringToLevel(lvl Level) zapcore.Level {
+func StringToLevel(lvl string) zapcore.Level {
 	switch lvl {
 	case "debug", "DEBUG":
-		return zapcore.DPanicLevel
+		return zapcore.DebugLevel
 	case "info", "INFO":
 		return zapcore.InfoLevel
 	case "warn", "WARN":

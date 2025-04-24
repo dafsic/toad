@@ -6,7 +6,7 @@ import (
 
 type Option func(*zap.Config)
 
-func WithLevel(level Level) Option {
+func WithLevel(level string) Option {
 	return func(c *zap.Config) {
 		c.Level = zap.NewAtomicLevelAt(StringToLevel(level))
 	}
