@@ -35,7 +35,7 @@ func (m *Module) Configure(app *cli.App) {
 func (m *Module) Install(ctx *cli.Context) fx.Option {
 	return fx.Module(ModuleName,
 		fx.Supply(
-			fx.Annotate(WithLevel(Level(ctx.String("bot_name"))), fx.ResultTags(`group:"options"`)),
+			fx.Annotate(WithLevel(Level(ctx.String("log_level"))), fx.ResultTags(`group:"options"`)),
 		),
 		fx.Provide(fx.Annotate(NewConfig, fx.ParamTags(`group:"options"`))),
 		fx.Provide(
