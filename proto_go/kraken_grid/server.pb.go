@@ -21,6 +21,138 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type StopRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Reason        string                 `protobuf:"bytes,1,opt,name=reason,proto3" json:"reason,omitempty"` // Reason for stopping the service
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StopRequest) Reset() {
+	*x = StopRequest{}
+	mi := &file_proto_kraken_grid_server_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StopRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StopRequest) ProtoMessage() {}
+
+func (x *StopRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_kraken_grid_server_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StopRequest.ProtoReflect.Descriptor instead.
+func (*StopRequest) Descriptor() ([]byte, []int) {
+	return file_proto_kraken_grid_server_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *StopRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type RunRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BasePrice     float64                `protobuf:"fixed64,1,opt,name=base_price,json=basePrice,proto3" json:"base_price,omitempty"` // Base price for the order
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RunRequest) Reset() {
+	*x = RunRequest{}
+	mi := &file_proto_kraken_grid_server_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RunRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunRequest) ProtoMessage() {}
+
+func (x *RunRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_kraken_grid_server_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunRequest.ProtoReflect.Descriptor instead.
+func (*RunRequest) Descriptor() ([]byte, []int) {
+	return file_proto_kraken_grid_server_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *RunRequest) GetBasePrice() float64 {
+	if x != nil {
+		return x.BasePrice
+	}
+	return 0
+}
+
+type StatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"` // Unique identifier for the status request
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StatusRequest) Reset() {
+	*x = StatusRequest{}
+	mi := &file_proto_kraken_grid_server_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StatusRequest) ProtoMessage() {}
+
+func (x *StatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_kraken_grid_server_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StatusRequest.ProtoReflect.Descriptor instead.
+func (*StatusRequest) Descriptor() ([]byte, []int) {
+	return file_proto_kraken_grid_server_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *StatusRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
 type PlaceOrderRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Side          string                 `protobuf:"bytes,1,opt,name=side,proto3" json:"side,omitempty"`              // Order direction: "buy" or "sell"
@@ -32,7 +164,7 @@ type PlaceOrderRequest struct {
 
 func (x *PlaceOrderRequest) Reset() {
 	*x = PlaceOrderRequest{}
-	mi := &file_proto_kraken_grid_server_proto_msgTypes[0]
+	mi := &file_proto_kraken_grid_server_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +176,7 @@ func (x *PlaceOrderRequest) String() string {
 func (*PlaceOrderRequest) ProtoMessage() {}
 
 func (x *PlaceOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_kraken_grid_server_proto_msgTypes[0]
+	mi := &file_proto_kraken_grid_server_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,7 +189,7 @@ func (x *PlaceOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlaceOrderRequest.ProtoReflect.Descriptor instead.
 func (*PlaceOrderRequest) Descriptor() ([]byte, []int) {
-	return file_proto_kraken_grid_server_proto_rawDescGZIP(), []int{0}
+	return file_proto_kraken_grid_server_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *PlaceOrderRequest) GetSide() string {
@@ -81,58 +213,6 @@ func (x *PlaceOrderRequest) GetPrice() float64 {
 	return 0
 }
 
-type PlaceOrderResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"` // Whether the operation was successful
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`  // Response message
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PlaceOrderResponse) Reset() {
-	*x = PlaceOrderResponse{}
-	mi := &file_proto_kraken_grid_server_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PlaceOrderResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PlaceOrderResponse) ProtoMessage() {}
-
-func (x *PlaceOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_kraken_grid_server_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PlaceOrderResponse.ProtoReflect.Descriptor instead.
-func (*PlaceOrderResponse) Descriptor() ([]byte, []int) {
-	return file_proto_kraken_grid_server_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *PlaceOrderResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *PlaceOrderResponse) GetMessage() string {
-	if x != nil {
-		return x.Message
-	}
-	return ""
-}
-
 type SetBasePriceRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	BasePrice     float64                `protobuf:"fixed64,1,opt,name=base_price,json=basePrice,proto3" json:"base_price,omitempty"` // Base price for the order
@@ -142,7 +222,7 @@ type SetBasePriceRequest struct {
 
 func (x *SetBasePriceRequest) Reset() {
 	*x = SetBasePriceRequest{}
-	mi := &file_proto_kraken_grid_server_proto_msgTypes[2]
+	mi := &file_proto_kraken_grid_server_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -154,7 +234,7 @@ func (x *SetBasePriceRequest) String() string {
 func (*SetBasePriceRequest) ProtoMessage() {}
 
 func (x *SetBasePriceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_kraken_grid_server_proto_msgTypes[2]
+	mi := &file_proto_kraken_grid_server_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -167,7 +247,7 @@ func (x *SetBasePriceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetBasePriceRequest.ProtoReflect.Descriptor instead.
 func (*SetBasePriceRequest) Descriptor() ([]byte, []int) {
-	return file_proto_kraken_grid_server_proto_rawDescGZIP(), []int{2}
+	return file_proto_kraken_grid_server_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *SetBasePriceRequest) GetBasePrice() float64 {
@@ -177,7 +257,7 @@ func (x *SetBasePriceRequest) GetBasePrice() float64 {
 	return 0
 }
 
-type SetBasePriceResponse struct {
+type Response struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"` // Whether the operation was successful
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`  // Response message
@@ -185,21 +265,21 @@ type SetBasePriceResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SetBasePriceResponse) Reset() {
-	*x = SetBasePriceResponse{}
-	mi := &file_proto_kraken_grid_server_proto_msgTypes[3]
+func (x *Response) Reset() {
+	*x = Response{}
+	mi := &file_proto_kraken_grid_server_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SetBasePriceResponse) String() string {
+func (x *Response) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SetBasePriceResponse) ProtoMessage() {}
+func (*Response) ProtoMessage() {}
 
-func (x *SetBasePriceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_kraken_grid_server_proto_msgTypes[3]
+func (x *Response) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_kraken_grid_server_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -210,19 +290,71 @@ func (x *SetBasePriceResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SetBasePriceResponse.ProtoReflect.Descriptor instead.
-func (*SetBasePriceResponse) Descriptor() ([]byte, []int) {
-	return file_proto_kraken_grid_server_proto_rawDescGZIP(), []int{3}
+// Deprecated: Use Response.ProtoReflect.Descriptor instead.
+func (*Response) Descriptor() ([]byte, []int) {
+	return file_proto_kraken_grid_server_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *SetBasePriceResponse) GetSuccess() bool {
+func (x *Response) GetSuccess() bool {
 	if x != nil {
 		return x.Success
 	}
 	return false
 }
 
-func (x *SetBasePriceResponse) GetMessage() string {
+func (x *Response) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type StatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`   // Current status of the service
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"` // Additional message or information
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StatusResponse) Reset() {
+	*x = StatusResponse{}
+	mi := &file_proto_kraken_grid_server_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StatusResponse) ProtoMessage() {}
+
+func (x *StatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_kraken_grid_server_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StatusResponse.ProtoReflect.Descriptor instead.
+func (*StatusResponse) Descriptor() ([]byte, []int) {
+	return file_proto_kraken_grid_server_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *StatusResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *StatusResponse) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
@@ -233,26 +365,38 @@ var File_proto_kraken_grid_server_proto protoreflect.FileDescriptor
 
 const file_proto_kraken_grid_server_proto_rawDesc = "" +
 	"\n" +
-	"\x1eproto/kraken_grid/server.proto\x12\vkraken_grid\"]\n" +
+	"\x1eproto/kraken_grid/server.proto\x12\vkraken_grid\"%\n" +
+	"\vStopRequest\x12\x16\n" +
+	"\x06reason\x18\x01 \x01(\tR\x06reason\"+\n" +
+	"\n" +
+	"RunRequest\x12\x1d\n" +
+	"\n" +
+	"base_price\x18\x01 \x01(\x01R\tbasePrice\".\n" +
+	"\rStatusRequest\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"]\n" +
 	"\x11PlaceOrderRequest\x12\x12\n" +
 	"\x04side\x18\x01 \x01(\tR\x04side\x12\x1e\n" +
 	"\n" +
 	"multiplier\x18\x02 \x01(\x05R\n" +
 	"multiplier\x12\x14\n" +
-	"\x05price\x18\x03 \x01(\x01R\x05price\"H\n" +
-	"\x12PlaceOrderResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"4\n" +
+	"\x05price\x18\x03 \x01(\x01R\x05price\"4\n" +
 	"\x13SetBasePriceRequest\x12\x1d\n" +
 	"\n" +
-	"base_price\x18\x01 \x01(\x01R\tbasePrice\"J\n" +
-	"\x14SetBasePriceResponse\x12\x18\n" +
+	"base_price\x18\x01 \x01(\x01R\tbasePrice\">\n" +
+	"\bResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2\xbb\x01\n" +
-	"\x11KrakenGridService\x12O\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"B\n" +
+	"\x0eStatusResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\xde\x02\n" +
+	"\x11KrakenGridService\x129\n" +
+	"\x04Stop\x12\x18.kraken_grid.StopRequest\x1a\x15.kraken_grid.Response\"\x00\x127\n" +
+	"\x03Run\x12\x17.kraken_grid.RunRequest\x1a\x15.kraken_grid.Response\"\x00\x12C\n" +
+	"\x06Status\x12\x1a.kraken_grid.StatusRequest\x1a\x1b.kraken_grid.StatusResponse\"\x00\x12E\n" +
 	"\n" +
-	"PlaceOrder\x12\x1e.kraken_grid.PlaceOrderRequest\x1a\x1f.kraken_grid.PlaceOrderResponse\"\x00\x12U\n" +
-	"\fSetBasePrice\x12 .kraken_grid.SetBasePriceRequest\x1a!.kraken_grid.SetBasePriceResponse\"\x00B\x0fZ\r.;kraken_gridb\x06proto3"
+	"PlaceOrder\x12\x1e.kraken_grid.PlaceOrderRequest\x1a\x15.kraken_grid.Response\"\x00\x12I\n" +
+	"\fSetBasePrice\x12 .kraken_grid.SetBasePriceRequest\x1a\x15.kraken_grid.Response\"\x00B\x0fZ\r.;kraken_gridb\x06proto3"
 
 var (
 	file_proto_kraken_grid_server_proto_rawDescOnce sync.Once
@@ -266,20 +410,29 @@ func file_proto_kraken_grid_server_proto_rawDescGZIP() []byte {
 	return file_proto_kraken_grid_server_proto_rawDescData
 }
 
-var file_proto_kraken_grid_server_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_kraken_grid_server_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_proto_kraken_grid_server_proto_goTypes = []any{
-	(*PlaceOrderRequest)(nil),    // 0: kraken_grid.PlaceOrderRequest
-	(*PlaceOrderResponse)(nil),   // 1: kraken_grid.PlaceOrderResponse
-	(*SetBasePriceRequest)(nil),  // 2: kraken_grid.SetBasePriceRequest
-	(*SetBasePriceResponse)(nil), // 3: kraken_grid.SetBasePriceResponse
+	(*StopRequest)(nil),         // 0: kraken_grid.StopRequest
+	(*RunRequest)(nil),          // 1: kraken_grid.RunRequest
+	(*StatusRequest)(nil),       // 2: kraken_grid.StatusRequest
+	(*PlaceOrderRequest)(nil),   // 3: kraken_grid.PlaceOrderRequest
+	(*SetBasePriceRequest)(nil), // 4: kraken_grid.SetBasePriceRequest
+	(*Response)(nil),            // 5: kraken_grid.Response
+	(*StatusResponse)(nil),      // 6: kraken_grid.StatusResponse
 }
 var file_proto_kraken_grid_server_proto_depIdxs = []int32{
-	0, // 0: kraken_grid.KrakenGridService.PlaceOrder:input_type -> kraken_grid.PlaceOrderRequest
-	2, // 1: kraken_grid.KrakenGridService.SetBasePrice:input_type -> kraken_grid.SetBasePriceRequest
-	1, // 2: kraken_grid.KrakenGridService.PlaceOrder:output_type -> kraken_grid.PlaceOrderResponse
-	3, // 3: kraken_grid.KrakenGridService.SetBasePrice:output_type -> kraken_grid.SetBasePriceResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	0, // 0: kraken_grid.KrakenGridService.Stop:input_type -> kraken_grid.StopRequest
+	1, // 1: kraken_grid.KrakenGridService.Run:input_type -> kraken_grid.RunRequest
+	2, // 2: kraken_grid.KrakenGridService.Status:input_type -> kraken_grid.StatusRequest
+	3, // 3: kraken_grid.KrakenGridService.PlaceOrder:input_type -> kraken_grid.PlaceOrderRequest
+	4, // 4: kraken_grid.KrakenGridService.SetBasePrice:input_type -> kraken_grid.SetBasePriceRequest
+	5, // 5: kraken_grid.KrakenGridService.Stop:output_type -> kraken_grid.Response
+	5, // 6: kraken_grid.KrakenGridService.Run:output_type -> kraken_grid.Response
+	6, // 7: kraken_grid.KrakenGridService.Status:output_type -> kraken_grid.StatusResponse
+	5, // 8: kraken_grid.KrakenGridService.PlaceOrder:output_type -> kraken_grid.Response
+	5, // 9: kraken_grid.KrakenGridService.SetBasePrice:output_type -> kraken_grid.Response
+	5, // [5:10] is the sub-list for method output_type
+	0, // [0:5] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -296,7 +449,7 @@ func file_proto_kraken_grid_server_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_kraken_grid_server_proto_rawDesc), len(file_proto_kraken_grid_server_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

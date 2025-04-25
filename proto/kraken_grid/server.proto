@@ -5,8 +5,23 @@ package kraken_grid;
 option go_package = ".;kraken_grid";
 
 service KrakenGridService {
-  rpc PlaceOrder(PlaceOrderRequest) returns (PlaceOrderResponse) {}
-  rpc SetBasePrice(SetBasePriceRequest) returns (SetBasePriceResponse) {}
+  rpc Stop(StopRequest) returns (Response) {}
+  rpc Run(RunRequest) returns (Response) {}
+  rpc Status(StatusRequest) returns (StatusResponse) {}
+  rpc PlaceOrder(PlaceOrderRequest) returns (Response) {}
+  rpc SetBasePrice(SetBasePriceRequest) returns (Response) {}
+}
+
+message StopRequest {
+  string reason = 1; // Reason for stopping the service
+}
+
+message RunRequest {
+  double base_price = 1; // Base price for the order
+}
+
+message StatusRequest {
+  string request_id = 1; // Unique identifier for the status request
 }
 
 message PlaceOrderRequest {
@@ -15,16 +30,16 @@ message PlaceOrderRequest {
   double price = 3;      // Price at which to place the order
 }
 
-message PlaceOrderResponse {
-  bool success = 1;      // Whether the operation was successful
-  string message = 2;    // Response message
-}
-
 message SetBasePriceRequest {
   double base_price = 1; // Base price for the order
 }
 
-message SetBasePriceResponse {
+message Response {
   bool success = 1;      // Whether the operation was successful
   string message = 2;    // Response message
+}
+
+message StatusResponse {
+  string status = 1;     // Current status of the service
+  string message = 2;    // Additional message or information
 }

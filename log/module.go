@@ -27,7 +27,7 @@ func (m *Module) Configure(app *cli.App) {
 		&cli.StringFlag{
 			Name:    "log_level",
 			EnvVars: []string{"LOG_LEVEL"},
-			Value:   "debug",
+			Value:   "info",
 		},
 	)
 }

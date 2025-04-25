@@ -61,6 +61,9 @@ func (s *GinServer) setupRoutes() {
 	api := s.router.Group("/api/v1")
 	{
 		api.POST("/orders", s.placeOrder)
+		api.POST("/stop", s.botStop)
+		api.POST("/run", s.botRun)
+		api.GET("/status", s.botStatus)
 	}
 }
 

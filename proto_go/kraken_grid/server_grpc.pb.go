@@ -19,6 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	KrakenGridService_Stop_FullMethodName         = "/kraken_grid.KrakenGridService/Stop"
+	KrakenGridService_Run_FullMethodName          = "/kraken_grid.KrakenGridService/Run"
+	KrakenGridService_Status_FullMethodName       = "/kraken_grid.KrakenGridService/Status"
 	KrakenGridService_PlaceOrder_FullMethodName   = "/kraken_grid.KrakenGridService/PlaceOrder"
 	KrakenGridService_SetBasePrice_FullMethodName = "/kraken_grid.KrakenGridService/SetBasePrice"
 )
@@ -27,8 +30,11 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type KrakenGridServiceClient interface {
-	PlaceOrder(ctx context.Context, in *PlaceOrderRequest, opts ...grpc.CallOption) (*PlaceOrderResponse, error)
-	SetBasePrice(ctx context.Context, in *SetBasePriceRequest, opts ...grpc.CallOption) (*SetBasePriceResponse, error)
+	Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*Response, error)
+	Run(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*Response, error)
+	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	PlaceOrder(ctx context.Context, in *PlaceOrderRequest, opts ...grpc.CallOption) (*Response, error)
+	SetBasePrice(ctx context.Context, in *SetBasePriceRequest, opts ...grpc.CallOption) (*Response, error)
 }
 
 type krakenGridServiceClient struct {
@@ -39,9 +45,39 @@ func NewKrakenGridServiceClient(cc grpc.ClientConnInterface) KrakenGridServiceCl
 	return &krakenGridServiceClient{cc}
 }
 
-func (c *krakenGridServiceClient) PlaceOrder(ctx context.Context, in *PlaceOrderRequest, opts ...grpc.CallOption) (*PlaceOrderResponse, error) {
+func (c *krakenGridServiceClient) Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*Response, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PlaceOrderResponse)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, KrakenGridService_Stop_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *krakenGridServiceClient) Run(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, KrakenGridService_Run_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *krakenGridServiceClient) Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, KrakenGridService_Status_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *krakenGridServiceClient) PlaceOrder(ctx context.Context, in *PlaceOrderRequest, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
 	err := c.cc.Invoke(ctx, KrakenGridService_PlaceOrder_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -49,9 +85,9 @@ func (c *krakenGridServiceClient) PlaceOrder(ctx context.Context, in *PlaceOrder
 	return out, nil
 }
 
-func (c *krakenGridServiceClient) SetBasePrice(ctx context.Context, in *SetBasePriceRequest, opts ...grpc.CallOption) (*SetBasePriceResponse, error) {
+func (c *krakenGridServiceClient) SetBasePrice(ctx context.Context, in *SetBasePriceRequest, opts ...grpc.CallOption) (*Response, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SetBasePriceResponse)
+	out := new(Response)
 	err := c.cc.Invoke(ctx, KrakenGridService_SetBasePrice_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -63,8 +99,11 @@ func (c *krakenGridServiceClient) SetBasePrice(ctx context.Context, in *SetBaseP
 // All implementations must embed UnimplementedKrakenGridServiceServer
 // for forward compatibility.
 type KrakenGridServiceServer interface {
-	PlaceOrder(context.Context, *PlaceOrderRequest) (*PlaceOrderResponse, error)
-	SetBasePrice(context.Context, *SetBasePriceRequest) (*SetBasePriceResponse, error)
+	Stop(context.Context, *StopRequest) (*Response, error)
+	Run(context.Context, *RunRequest) (*Response, error)
+	Status(context.Context, *StatusRequest) (*StatusResponse, error)
+	PlaceOrder(context.Context, *PlaceOrderRequest) (*Response, error)
+	SetBasePrice(context.Context, *SetBasePriceRequest) (*Response, error)
 	mustEmbedUnimplementedKrakenGridServiceServer()
 }
 
@@ -75,10 +114,19 @@ type KrakenGridServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedKrakenGridServiceServer struct{}
 
-func (UnimplementedKrakenGridServiceServer) PlaceOrder(context.Context, *PlaceOrderRequest) (*PlaceOrderResponse, error) {
+func (UnimplementedKrakenGridServiceServer) Stop(context.Context, *StopRequest) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
+}
+func (UnimplementedKrakenGridServiceServer) Run(context.Context, *RunRequest) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Run not implemented")
+}
+func (UnimplementedKrakenGridServiceServer) Status(context.Context, *StatusRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Status not implemented")
+}
+func (UnimplementedKrakenGridServiceServer) PlaceOrder(context.Context, *PlaceOrderRequest) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PlaceOrder not implemented")
 }
-func (UnimplementedKrakenGridServiceServer) SetBasePrice(context.Context, *SetBasePriceRequest) (*SetBasePriceResponse, error) {
+func (UnimplementedKrakenGridServiceServer) SetBasePrice(context.Context, *SetBasePriceRequest) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetBasePrice not implemented")
 }
 func (UnimplementedKrakenGridServiceServer) mustEmbedUnimplementedKrakenGridServiceServer() {}
@@ -100,6 +148,60 @@ func RegisterKrakenGridServiceServer(s grpc.ServiceRegistrar, srv KrakenGridServ
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&KrakenGridService_ServiceDesc, srv)
+}
+
+func _KrakenGridService_Stop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KrakenGridServiceServer).Stop(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KrakenGridService_Stop_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KrakenGridServiceServer).Stop(ctx, req.(*StopRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KrakenGridService_Run_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RunRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KrakenGridServiceServer).Run(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KrakenGridService_Run_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KrakenGridServiceServer).Run(ctx, req.(*RunRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KrakenGridService_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KrakenGridServiceServer).Status(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KrakenGridService_Status_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KrakenGridServiceServer).Status(ctx, req.(*StatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _KrakenGridService_PlaceOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -145,6 +247,18 @@ var KrakenGridService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "kraken_grid.KrakenGridService",
 	HandlerType: (*KrakenGridServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Stop",
+			Handler:    _KrakenGridService_Stop_Handler,
+		},
+		{
+			MethodName: "Run",
+			Handler:    _KrakenGridService_Run_Handler,
+		},
+		{
+			MethodName: "Status",
+			Handler:    _KrakenGridService_Status_Handler,
+		},
 		{
 			MethodName: "PlaceOrder",
 			Handler:    _KrakenGridService_PlaceOrder_Handler,

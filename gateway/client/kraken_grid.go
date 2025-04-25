@@ -93,3 +93,15 @@ func (c *KrakenGridClient) SetBasePrice(ctx context.Context, basePrice float64) 
 
 	return resp.Success, resp.Message, nil
 }
+
+func (c *KrakenGridClient) Run(ctx context.Context, req *pb.RunRequest) (*pb.Response, error) {
+	return c.grpcClient.Run(ctx, req)
+}
+
+func (c *KrakenGridClient) Stop(ctx context.Context, req *pb.StopRequest) (*pb.Response, error) {
+	return c.grpcClient.Stop(ctx, req)
+}
+
+func (c *KrakenGridClient) Status(ctx context.Context, req *pb.StatusRequest) (*pb.StatusResponse, error) {
+	return c.grpcClient.Status(ctx, req)
+}

@@ -35,7 +35,9 @@ func (s *GinServer) placeOrder(c *gin.Context) {
 
 	s.logger.Info("Processing order request",
 		zap.String("side", req.Side),
-		zap.Int32("multiplier", req.Multiplier))
+		zap.Int32("multiplier", req.Multiplier),
+		zap.Float64("price", req.Price),
+	)
 
 	// Validate request parameters
 	if req.Side != "buy" && req.Side != "sell" {

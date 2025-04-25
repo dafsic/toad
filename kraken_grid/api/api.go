@@ -5,7 +5,9 @@ import (
 )
 
 type API interface {
-	Pair() string
+	Run(basePrice float64) error
+	Stop(reason string)
+	Status() (string, string)
 	PlaceOrder(side string, multiplier int, price float64) error
 	SetBasePrice(price float64)
 }
@@ -22,8 +24,17 @@ func NewAPI(bot bot.Bot) *api {
 	}
 }
 
-func (a *api) Pair() string {
-	return a.bot.Pair()
+func (a *api) Run(basePrice float64) error {
+	a.bot.SetBasePrice(basePrice)
+	return a.bot.Run()
+}
+
+func (a *api) Stop(reason string) {
+	a.bot.Stop(reason)
+}
+
+func (a *api) Status() (string, string) {
+	return a.bot.Status()
 }
 
 func (a *api) PlaceOrder(side string, multiplier int, price float64) error {

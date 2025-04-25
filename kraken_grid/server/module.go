@@ -75,6 +75,6 @@ type GRPCServer struct {
 }
 
 // PlaceOrder implements the gRPC interface, forwarding requests to our service implementation
-func (s *GRPCServer) PlaceOrder(ctx context.Context, req *pb.PlaceOrderRequest) (*pb.PlaceOrderResponse, error) {
+func (s *GRPCServer) PlaceOrder(ctx context.Context, req *pb.PlaceOrderRequest) (*pb.Response, error) {
 	return s.Server.PlaceOrder(ctx, req)
 }

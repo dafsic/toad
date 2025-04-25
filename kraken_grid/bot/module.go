@@ -73,7 +73,7 @@ func RunBot(bot Bot, lc fx.Lifecycle) {
 			return bot.Run()
 		},
 		OnStop: func(context.Context) error {
-			bot.Stop()
+			bot.Stop("received stop signal")
 			return nil
 		},
 	})

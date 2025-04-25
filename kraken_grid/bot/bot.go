@@ -23,11 +23,10 @@ const (
 )
 
 type Bot interface {
-	Stop()
 	Run() error
-	Status() (string, error)
-	Err() error
-	Pair() string
+	Stop(reason string)
+	Status() (string, string)
+	//Pair() string
 	GetStep() float64
 	GetBasePrice() float64
 	SetBasePrice(new float64)
@@ -84,21 +83,15 @@ func (b *GridBot) GetStep() float64 {
 	return b.config.step
 }
 
-func (b *GridBot) Status() (string, error) {
-	status := b.status.Load()
-	if status == utils.On {
-		return StatusRunning, nil
-	} else {
+func (b *GridBot) Status() (s string, e string) {
+	s, e = StatusRunning, ""
+	if utils.Off == b.status.Load() {
+		s, e = StatusStopped, ""
 		if b.err != nil {
-			return StatusError, b.err
-		} else {
-			return StatusStopped, nil
+			s, e = StatusError, b.err.Error()
 		}
 	}
-}
-
-func (b *GridBot) Err() error {
-	return b.err
+	return
 }
 
 func (b *GridBot) Run() error {
@@ -117,8 +110,8 @@ func (b *GridBot) Run() error {
 	return nil
 }
 
-func (b *GridBot) Stop() {
-	b.stopChan <- errors.New("bot stopped by user")
+func (b *GridBot) Stop(reason string) {
+	b.stopChan <- errors.New(reason)
 }
 
 func (b *GridBot) listenStop() {
