@@ -111,3 +111,7 @@ func LineInfo() string {
 
 	return strings.Join(ConcatStrings(file, "(", function, "):", strconv.Itoa(line)), "")
 }
+
+func Pointer[T any](val T) *T {
+	return &val
+}

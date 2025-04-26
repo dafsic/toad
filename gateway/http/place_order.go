@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 
+	pb "github.com/dafsic/toad/proto_go/kraken_grid"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -65,7 +66,12 @@ func (s *GinServer) placeOrder(c *gin.Context) {
 		return
 	}
 
-	success, message, err := client.PlaceOrder(c.Request.Context(), req.Side, req.Multiplier, req.Price)
+	resp, err := client.PlaceOrder(c.Request.Context(), &pb.PlaceOrderRequest{
+		Side:       req.Side,
+		Multiplier: req.Multiplier,
+		Price:      req.Price,
+	})
+
 	if err != nil {
 		s.logger.Error("gRPC client error", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, PlaceOrderResponse{
@@ -77,8 +83,8 @@ func (s *GinServer) placeOrder(c *gin.Context) {
 
 	// Construct response
 	response := PlaceOrderResponse{
-		Success: success,
-		Message: message,
+		Success: resp.Success,
+		Message: resp.Message,
 	}
 
 	c.JSON(http.StatusOK, response)

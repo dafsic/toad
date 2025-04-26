@@ -10,7 +10,6 @@ import (
 
 	"github.com/dafsic/toad/kraken_grid/model"
 	"github.com/dafsic/toad/utils"
-	"github.com/dafsic/toad/utils/pointer"
 	"github.com/dafsic/toad/websocket"
 	"go.uber.org/zap"
 )
@@ -155,9 +154,9 @@ func (b *GridBot) handleExecutionsChannel(message map[string]any) {
 			return
 		}
 
-		order.OrderID = pointer.Get(orderID)
-		order.UpdatedAt = pointer.Get(time.Now())
-		order.Status = pointer.Get(exec["exec_type"].(string))
+		order.OrderID = utils.Pointer(orderID)
+		order.UpdatedAt = utils.Pointer(time.Now())
+		order.Status = utils.Pointer(exec["exec_type"].(string))
 		err = b.dao.UpdateOrder(context.TODO(), order) // Update order in database
 		if err != nil {
 			b.stopChan <- fmt.Errorf("failed to update order[%s] in database: %w", orderID, err)

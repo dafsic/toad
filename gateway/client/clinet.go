@@ -13,5 +13,6 @@ type GrpcClient interface {
 	Stop(ctx context.Context, req *pb.StopRequest) (*pb.Response, error)
 	Run(ctx context.Context, req *pb.RunRequest) (*pb.Response, error)
 	Status(ctx context.Context, req *pb.StatusRequest) (*pb.StatusResponse, error)
-	PlaceOrder(ctx context.Context, side string, multiplier int32, price float64) (bool, string, error)
+	SetBasePrice(ctx context.Context, req *pb.SetBasePriceRequest) (*pb.Response, error)
+	PlaceOrder(ctx context.Context, req *pb.PlaceOrderRequest) (*pb.Response, error)
 }

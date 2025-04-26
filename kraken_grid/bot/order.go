@@ -7,7 +7,6 @@ import (
 	"github.com/dafsic/toad/kraken_grid/dao"
 	"github.com/dafsic/toad/kraken_grid/model"
 	"github.com/dafsic/toad/utils"
-	"github.com/dafsic/toad/utils/pointer"
 )
 
 func (b *GridBot) PlaceOrder(order *model.Order) {
@@ -66,13 +65,13 @@ func (b *GridBot) rebaseOrders() {
 
 func (b *GridBot) NewOrder(side string, price float64, multiplier int) *model.Order {
 	return &model.Order{
-		Bot:        pointer.Get(b.Pair()),
-		Exchange:   pointer.Get("kraken"),
-		Pair:       pointer.Get(b.config.baseCoin + "/" + b.config.quoteCoin),
-		Price:      pointer.Get(utils.FormatFloat(price, 6)),
-		Amount:     pointer.Get(b.config.amount),
+		Bot:        utils.Pointer(b.Pair()),
+		Exchange:   utils.Pointer("kraken"),
+		Pair:       utils.Pointer(b.config.baseCoin + "/" + b.config.quoteCoin),
+		Price:      utils.Pointer(utils.FormatFloat(price, 6)),
+		Amount:     utils.Pointer(b.config.amount),
 		Side:       &side,
 		Multiplier: &multiplier,
-		Status:     pointer.Get("pending"),
+		Status:     utils.Pointer("pending"),
 	}
 }
