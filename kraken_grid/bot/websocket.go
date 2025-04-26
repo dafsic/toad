@@ -47,12 +47,6 @@ func (b *GridBot) OnTextMessage(data string, socket *websocket.Socket) {
 
 func (b *GridBot) newSocket(url string) *websocket.Socket {
 	socket := websocket.New(url, b.logger)
-	socket.OnPingReceived = func(appData string, s *websocket.Socket) {
-		b.logger.Info("WebSocket ping received", zap.String("url", s.Url), zap.String("data", appData))
-	}
-	socket.OnPongReceived = func(appData string, s *websocket.Socket) {
-		b.logger.Info("WebSocket pong received", zap.String("url", s.Url), zap.String("data", appData))
-	}
 	socket.OnConnected = func(s *websocket.Socket) {
 		b.logger.Info("WebSocket connected", zap.String("url", s.Url))
 	}

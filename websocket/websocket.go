@@ -23,8 +23,6 @@ type Socket struct {
 	OnConnected       func(socket *Socket)
 	OnTextMessage     func(message string, socket *Socket)
 	OnBinaryMessage   func(data []byte, socket *Socket)
-	OnPingReceived    func(data string, socket *Socket)
-	OnPongReceived    func(data string, socket *Socket)
 	mux               *sync.Mutex // for locking the connection
 	logger            *zap.Logger
 	reconnectCounter  int
@@ -56,6 +54,7 @@ func (socket *Socket) setConnectionOptions() {
 	socket.WebsocketDialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: socket.ConnectionOptions.UseSSL}
 	socket.WebsocketDialer.Proxy = socket.ConnectionOptions.Proxy
 	socket.WebsocketDialer.Subprotocols = socket.ConnectionOptions.Subprotocols
+	socket.WebsocketDialer.HandshakeTimeout = 5 * time.Second
 }
 
 func (socket *Socket) Connect() {
@@ -76,22 +75,6 @@ func (socket *Socket) Connect() {
 	if socket.OnConnected != nil {
 		socket.OnConnected(socket)
 	}
-
-	defaultPingHandler := socket.Conn.PingHandler()
-	socket.Conn.SetPingHandler(func(appData string) error {
-		if socket.OnPingReceived != nil {
-			socket.OnPingReceived(appData, socket)
-		}
-		return defaultPingHandler(appData)
-	})
-
-	defaultPongHandler := socket.Conn.PongHandler()
-	socket.Conn.SetPongHandler(func(appData string) error {
-		if socket.OnPongReceived != nil {
-			socket.OnPongReceived(appData, socket)
-		}
-		return defaultPongHandler(appData)
-	})
 
 	go func() {
 		for {
@@ -151,7 +134,7 @@ func (socket *Socket) handleReadError(err error) {
 	switch e := err.(type) {
 	case *websocket.CloseError:
 		if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-			socket.logger.Info("WebSocket closed normally", zap.Int("code", e.Code))
+			socket.logger.Info("WebSocket closed normally", zap.Int("code", e.Code), zap.String("url", socket.Url))
 			socket.Conn.Close()
 			return
 		}
@@ -170,6 +153,6 @@ func (socket *Socket) handleReadError(err error) {
 func (socket *Socket) reconnect() {
 	socket.reconnectCounter++
 	socket.logger.Info("Reconnecting to server", zap.Int("attempt", socket.reconnectCounter))
-	time.Sleep(time.Duration(socket.reconnectCounter) * time.Second)
+	time.Sleep(time.Duration(socket.reconnectCounter) * time.Minute)
 	socket.Connect()
 }
