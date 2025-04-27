@@ -20,12 +20,10 @@ type Socket struct {
 	Url               string
 	ConnectionOptions ConnectionOptions
 	RequestHeader     http.Header
-	OnConnected       func(socket *Socket)
 	OnTextMessage     func(message string, socket *Socket)
 	OnBinaryMessage   func(data []byte, socket *Socket)
 	mux               *sync.Mutex // for locking the connection
 	logger            *zap.Logger
-	reconnectCounter  int
 }
 
 type ConnectionOptions struct {
@@ -54,27 +52,20 @@ func (socket *Socket) setConnectionOptions() {
 	socket.WebsocketDialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: socket.ConnectionOptions.UseSSL}
 	socket.WebsocketDialer.Proxy = socket.ConnectionOptions.Proxy
 	socket.WebsocketDialer.Subprotocols = socket.ConnectionOptions.Subprotocols
-	socket.WebsocketDialer.HandshakeTimeout = 5 * time.Second
+	socket.WebsocketDialer.HandshakeTimeout = 10 * time.Second
 }
 
 func (socket *Socket) Connect() {
 	var err error
 	socket.setConnectionOptions()
 
-	socket.mux.Lock()
 	socket.Conn, _, err = socket.WebsocketDialer.Dial(socket.Url, socket.RequestHeader)
-	socket.mux.Unlock()
 	if err != nil {
 		socket.logger.Panic("WebSocket connection error", zap.String("url", socket.Url), zap.Error(err))
 		return
 	}
 
-	socket.reconnectCounter = 0
 	socket.logger.Info("Connected to server", zap.String("url", socket.Url))
-
-	if socket.OnConnected != nil {
-		socket.OnConnected(socket)
-	}
 
 	go func() {
 		for {
@@ -131,11 +122,13 @@ func (socket *Socket) Close() {
 }
 
 func (socket *Socket) handleReadError(err error) {
+	socket.mux.Lock()
+	defer socket.mux.Unlock()
+	socket.Conn.Close()
 	switch e := err.(type) {
 	case *websocket.CloseError:
 		if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 			socket.logger.Info("WebSocket closed normally", zap.Int("code", e.Code), zap.String("url", socket.Url))
-			socket.Conn.Close()
 			return
 		}
 		socket.logger.Error("WebSocket read error, reconnecting...", zap.Error(err), zap.Int("code", e.Code))
@@ -151,8 +144,7 @@ func (socket *Socket) handleReadError(err error) {
 }
 
 func (socket *Socket) reconnect() {
-	socket.reconnectCounter++
-	socket.logger.Info("Reconnecting to server", zap.Int("attempt", socket.reconnectCounter))
-	time.Sleep(time.Duration(socket.reconnectCounter) * time.Minute)
+	socket.logger.Info("Reconnecting to server", zap.String("url", socket.Url))
+	time.Sleep(time.Minute)
 	socket.Connect()
 }
