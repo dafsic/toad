@@ -26,7 +26,7 @@ const (
 	// APIVersion is the official Kraken API Version Number
 	APIVersion = "0"
 	// APIUserAgent identifies this library with the Kraken API
-	APIUserAgent = "Kraken GO API Agent (https://github.com/dafsic/crypto-hunter)"
+	APIUserAgent = "Kraken GO API Agent"
 
 	PublicWSURL  = "wss://ws.kraken.com/v2"
 	PrivateWSURL = "wss://ws-auth.kraken.com/v2"
