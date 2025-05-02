@@ -74,7 +74,29 @@ type GRPCServer struct {
 	Server Server
 }
 
+var _ pb.KrakenGridServiceServer = (*GRPCServer)(nil)
+
 // PlaceOrder implements the gRPC interface, forwarding requests to our service implementation
 func (s *GRPCServer) PlaceOrder(ctx context.Context, req *pb.PlaceOrderRequest) (*pb.Response, error) {
 	return s.Server.PlaceOrder(ctx, req)
+}
+
+// Stop implements the gRPC interface, forwarding requests to our service implementation
+func (s *GRPCServer) Stop(ctx context.Context, req *pb.StopRequest) (*pb.Response, error) {
+	return s.Server.Stop(ctx, req)
+}
+
+// Run implements the gRPC interface, forwarding requests to our service implementation
+func (s *GRPCServer) Run(ctx context.Context, req *pb.RunRequest) (*pb.Response, error) {
+	return s.Server.Run(ctx, req)
+}
+
+// Status implements the gRPC interface, forwarding requests to our service implementation
+func (s *GRPCServer) Status(ctx context.Context, req *pb.StatusRequest) (*pb.StatusResponse, error) {
+	return s.Server.Status(ctx, req)
+}
+
+// SetBasePrice implements the gRPC interface, forwarding requests to our service implementation
+func (s *GRPCServer) SetBasePrice(ctx context.Context, req *pb.SetBasePriceRequest) (*pb.Response, error) {
+	return s.Server.SetBasePrice(ctx, req)
 }
