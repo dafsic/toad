@@ -45,14 +45,14 @@ func (b *GridBot) OnTextMessage(data string, socket *websocket.Socket) {
 	}
 }
 
-func (b *GridBot) newSocket(url string) *websocket.Socket {
+func (b *GridBot) newSocket(url string) (*websocket.Socket, error) {
 	socket := websocket.New(url, b.logger)
 
 	socket.OnBinaryMessage = b.OnBinaryMessage
 	socket.OnTextMessage = b.OnTextMessage
 
-	socket.Connect()
-	return socket
+	err := socket.Connect()
+	return socket, err
 }
 
 func (b *GridBot) handleMapMessage(message map[string]any) {

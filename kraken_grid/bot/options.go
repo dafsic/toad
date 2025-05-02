@@ -82,7 +82,7 @@ func NewConfig(opts ...Option) *Config {
 		amount:      1,
 		baseCoin:    "XMR",
 		quoteCoin:   "BTC",
-		multipliers: []int{1, 1, 3},
+		multipliers: []int{1, 1, 8},
 		interval:    600,
 	}
 	for _, opt := range opts {

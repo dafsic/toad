@@ -100,9 +100,10 @@ func (b *GridBot) Run() error {
 		return errors.New("at least 2 multipliers are required")
 	}
 
-	for _, v := range b.config.multipliers[:len(b.config.multipliers)-1] {
+	for _, v := range b.config.multipliers {
 		b.threshold += b.config.step * float64(v)
 	}
+	b.logger.Info("Threshold", zap.Float64("threshold", b.threshold))
 
 	utils.TurnOn(b.status)
 	go b.listenStop()
@@ -135,8 +136,16 @@ func (b *GridBot) mainloop() {
 	b.token = token.Token
 
 	// Initialize websockets
-	b.publicWS = b.newSocket(kraken.PublicWSURL)
-	b.privateWS = b.newSocket(kraken.PrivateWSURL)
+	b.publicWS, err = b.newSocket(kraken.PublicWSURL)
+	if err != nil {
+		b.stopChan <- err
+		return
+	}
+	b.privateWS, err = b.newSocket(kraken.PrivateWSURL)
+	if err != nil {
+		b.stopChan <- err
+		return
+	}
 
 	// Subscribe to necessary channels
 	if err := b.krakenAPI.SubscribeTickers(b.publicWS, b.Pair()); err != nil {
