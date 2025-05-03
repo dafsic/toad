@@ -26,13 +26,14 @@ type GinServer struct {
 }
 
 // NewGinServer creates a new Gin HTTP server
-func NewGinServer(logger *zap.Logger, clients ...client.GrpcClient) *GinServer {
+func NewGinServer(logger *zap.Logger, secret string, clients ...client.GrpcClient) *GinServer {
 	router := gin.New()
 	router.Use(gin.Recovery())
 
 	// Use custom Logger middleware
 	router.Use(middlewares.Logger(logger))
 	router.Use(middlewares.CORS())
+	router.Use(middlewares.Auth(secret))
 
 	server := &GinServer{
 		router:  router,

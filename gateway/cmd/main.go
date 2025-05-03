@@ -47,18 +47,25 @@ func (m *GatewayModule) Configure(app *cli.App) {
 			Value:   "localhost:50052",
 			Usage:   "Ogre_XMRBTC gRPC server address",
 		},
+		&cli.StringFlag{
+			Name:     "secret_key",
+			EnvVars:  []string{"SECRET_KEY"},
+			Required: true,
+			Usage:    "Secret key for authentication",
+		},
 	)
 }
 
 func (m *GatewayModule) Install(ctx *cli.Context) fx.Option {
 	httpAddr := ctx.String("http_addr")
 	krakenXMRBTCAddr := ctx.String("kraken_xmrbtc_addr")
+	secretKey := ctx.String("secret_key")
 
 	return fx.Module("gateway",
 		fx.Provide(
 			fx.Annotate(
 				func(logger *zap.Logger, clinets ...client.GrpcClient) http.Server {
-					return http.NewGinServer(logger, clinets...)
+					return http.NewGinServer(logger, secretKey, clinets...)
 				},
 				fx.ParamTags("", `group:"clients"`),
 			),
