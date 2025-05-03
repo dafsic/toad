@@ -112,19 +112,21 @@ func (b *GridBot) handleTickerChannel(message map[string]any) {
 	)
 
 	basePrice := b.GetBasePrice()
-	if math.Abs(b.config.currentPrice-basePrice) > b.threshold {
-		b.logger.Info("Price exceeded threshold",
-			zap.Float64("current price", b.config.currentPrice),
-			zap.Float64("base price", basePrice),
-		)
-		b.config.timer.Start()
-		if b.config.timer.IsExpired() {
+	if b.config.autoRebase {
+		if math.Abs(b.config.currentPrice-basePrice) > b.threshold {
+			b.logger.Info("Price exceeded threshold",
+				zap.Float64("current price", b.config.currentPrice),
+				zap.Float64("base price", basePrice),
+			)
+			b.config.timer.Start()
+			if b.config.timer.IsExpired() {
+				b.config.timer.Reset()
+				b.SetBasePrice(b.config.currentPrice)
+				b.rebaseOrders()
+			}
+		} else {
 			b.config.timer.Reset()
-			b.SetBasePrice(b.config.currentPrice)
-			b.rebaseOrders()
 		}
-	} else {
-		b.config.timer.Reset()
 	}
 
 }

@@ -15,6 +15,7 @@ type Config struct {
 	amount       float64 // Amount of BaseCoin per grid order
 	multipliers  []int   // Multipliers for the grid orders
 	basePrice    float64 // Base price for the grid(optional, default is current price)
+	autoRebase   bool    // If true, the base price will be adjusted automatically
 	currentPrice float64 // Current price of the market
 	// If the current price stays above the base price plus step size for the full interval duration,
 	// the base price will be adjusted and orders will be rebalanced.
@@ -73,6 +74,12 @@ func WithMultipliers(multipliers string) Option {
 func WithInterval(interval int64) Option {
 	return func(c *Config) {
 		c.interval = interval
+	}
+}
+
+func WithAutoRebase(autoRebase bool) Option {
+	return func(c *Config) {
+		c.autoRebase = autoRebase
 	}
 }
 

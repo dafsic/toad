@@ -35,6 +35,11 @@ func (m *Module) Configure(app *cli.App) {
 			EnvVars: []string{"BASE_PRICE"},
 			Value:   0,
 		},
+		&cli.BoolFlag{
+			Name:    "auto_rebase",
+			EnvVars: []string{"AUTO_REBASE"},
+			Value:   false,
+		},
 	)
 }
 
@@ -57,6 +62,9 @@ func (m *Module) Install(ctx *cli.Context) fx.Option {
 	}
 	if ctx.IsSet("multipliers") {
 		options = append(options, fx.Supply(fx.Annotate(WithMultipliers(ctx.String("multipliers")), fx.ResultTags(`group:"options"`))))
+	}
+	if ctx.IsSet("auto_rebase") {
+		options = append(options, fx.Supply(fx.Annotate(WithAutoRebase(ctx.Bool("auto_rebase")), fx.ResultTags(`group:"options"`))))
 	}
 	options = append(options,
 		fx.Provide(fx.Annotate(NewConfig, fx.ParamTags(`group:"options"`))),
