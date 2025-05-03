@@ -47,6 +47,10 @@ gateway:  ## Compile gateway
 kraken_grid:  ## Compile kraken_grid
 	CGO_ENABLED=$(CGO_ENABLED) go build -trimpath -ldflags "$(GO_LDFLAGS)" -o $(BINDIR)/kraken_grid ./kraken_grid/cmd
 
+.PHONY: telegram
+telegram:  ## Compile telegram
+	CGO_ENABLED=$(CGO_ENABLED) go build -trimpath -ldflags "$(GO_LDFLAGS)" -o $(BINDIR)/telegram ./telegram/cmd
+
 .PHONY: proto
 proto: ## Generate proto files
 	protoc --go_out=proto_go/kraken_grid --go-grpc_out=proto_go/kraken_grid  proto/kraken_grid/server.proto
