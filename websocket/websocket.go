@@ -8,14 +8,17 @@ import (
 	"net/url"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/dafsic/toad/utils"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
 type Socket struct {
 	Conn              *websocket.Conn
+	ConnStatus        *atomic.Int32
 	WebsocketDialer   *websocket.Dialer
 	Url               string
 	ConnectionOptions ConnectionOptions
@@ -35,6 +38,7 @@ type ConnectionOptions struct {
 
 func New(url string, l *zap.Logger) *Socket {
 	return &Socket{
+		ConnStatus:    new(atomic.Int32),
 		Url:           url,
 		RequestHeader: http.Header{},
 		ConnectionOptions: ConnectionOptions{
@@ -53,6 +57,15 @@ func (socket *Socket) setConnectionOptions() {
 	socket.WebsocketDialer.Proxy = socket.ConnectionOptions.Proxy
 	socket.WebsocketDialer.Subprotocols = socket.ConnectionOptions.Subprotocols
 	socket.WebsocketDialer.HandshakeTimeout = 30 * time.Second
+	// socket.WebsocketDialer.NetDial = func(network, addr string) (net.Conn, error) {
+	// 	dialer := &net.Dialer{
+	// 		LocalAddr: &net.TCPAddr{
+	// 			IP:   net.ParseIP("0.0.0.0"),
+	// 			Port: 0,
+	// 		},
+	// 	}
+	// 	return dialer.Dial(network, addr)
+	// }
 }
 
 func (socket *Socket) Connect() error {
@@ -65,28 +78,11 @@ func (socket *Socket) Connect() error {
 		return err
 	}
 
-	socket.logger.Info("Connected to server", zap.String("url", socket.Url))
+	socket.logger.Info("Connected to server", zap.String("url", socket.Url), zap.String("addr", socket.Conn.LocalAddr().String()))
+	utils.TurnOn(socket.ConnStatus)
 
-	go func() {
-		for {
-			messageType, message, err := socket.Conn.ReadMessage()
-			if err != nil {
-				socket.handleReadError(err)
-				return
-			}
+	go socket.readloop()
 
-			switch messageType {
-			case websocket.TextMessage:
-				if socket.OnTextMessage != nil {
-					socket.OnTextMessage(string(message), socket)
-				}
-			case websocket.BinaryMessage:
-				if socket.OnBinaryMessage != nil {
-					socket.OnBinaryMessage(message, socket)
-				}
-			}
-		}
-	}()
 	return nil
 }
 
@@ -99,7 +95,33 @@ func (socket *Socket) SendBinary(data []byte) error {
 	return socket.send(websocket.BinaryMessage, data)
 }
 
+func (socket *Socket) readloop() {
+	for {
+		messageType, message, err := socket.Conn.ReadMessage()
+		if err != nil {
+			socket.handleReadError(err)
+			break
+		}
+
+		switch messageType {
+		case websocket.TextMessage:
+			if socket.OnTextMessage != nil {
+				socket.OnTextMessage(string(message), socket)
+			}
+		case websocket.BinaryMessage:
+			if socket.OnBinaryMessage != nil {
+				socket.OnBinaryMessage(message, socket)
+			}
+		}
+	}
+}
+
 func (socket *Socket) send(messageType int, data []byte) error {
+	if utils.SwitcherStatus(socket.ConnStatus) == utils.Off {
+		socket.logger.Error("WebSocket connection is closed, cannot send message", zap.String("url", socket.Url))
+		return nil
+	}
+
 	socket.mux.Lock()
 	err := socket.Conn.WriteMessage(messageType, data)
 	socket.mux.Unlock()
@@ -123,6 +145,7 @@ func (socket *Socket) Close() {
 }
 
 func (socket *Socket) handleReadError(err error) {
+	utils.TurnOff(socket.ConnStatus)
 	socket.mux.Lock()
 	defer socket.mux.Unlock()
 	socket.Conn.Close()
@@ -146,11 +169,11 @@ func (socket *Socket) handleReadError(err error) {
 
 func (socket *Socket) reconnect() {
 	for i := range 5 {
+		time.Sleep(time.Minute)
 		socket.logger.Info("Reconnecting to server", zap.Int("count", i), zap.String("url", socket.Url))
 		err := socket.Connect()
 		if err == nil {
 			return
 		}
-		time.Sleep(time.Minute)
 	}
 }

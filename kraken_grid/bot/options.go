@@ -11,8 +11,10 @@ type Config struct {
 	quoteCoin    string  // Quote coin for the grid
 	step         float64 // Step size for the grid
 	amount       float64 // Amount of BaseCoin per grid order
-	multipliers  []int   // Multipliers for the grid orders
 	currentPrice float64 // Current price of the market
+	// Multipliers for the grid orders
+	// ---not used yet---
+	multipliers []int
 }
 
 type Option func(*Config)
