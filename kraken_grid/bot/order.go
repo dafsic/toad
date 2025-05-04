@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/dafsic/toad/kraken_grid/dao"
 	"github.com/dafsic/toad/kraken_grid/model"
 	"github.com/dafsic/toad/utils"
 )
@@ -30,39 +29,6 @@ func (b *GridBot) PlaceOrder(order *model.Order) {
 	}
 }
 
-func (b *GridBot) rebaseOrders() {
-	// cancel all orders
-	orders, err := b.dao.GetOpenOrders(context.TODO(), b.Pair())
-	if err != nil && err != dao.ErrNotFound {
-		b.stopChan <- fmt.Errorf("failed to get open orders from database: %w", err)
-		return
-	}
-
-	orderIDs := make([]string, len(orders))
-	for i, order := range orders {
-		orderIDs[i] = *order.OrderID
-	}
-
-	if len(orders) > 0 {
-		err := b.krakenAPI.CancelOrderWithWebsocket(b.privateWS, b.token, orderIDs)
-		if err != nil {
-			b.stopChan <- fmt.Errorf("failed to cancel orders: %w", err)
-			return
-		}
-	}
-
-	// place new orders
-	basePrice := b.GetBasePrice()
-	buyBasePrice := basePrice
-	sellBasePrice := basePrice
-	for _, v := range b.config.multipliers {
-		buyBasePrice -= b.config.step * float64(v)
-		sellBasePrice += b.config.step * float64(v)
-		b.PlaceOrder(b.NewOrder(OrderBuy, buyBasePrice, v))
-		b.PlaceOrder(b.NewOrder(OrderSell, sellBasePrice, v))
-	}
-}
-
 func (b *GridBot) NewOrder(side string, price float64, multiplier int) *model.Order {
 	return &model.Order{
 		Bot:        utils.Pointer(b.Pair()),
@@ -75,3 +41,36 @@ func (b *GridBot) NewOrder(side string, price float64, multiplier int) *model.Or
 		Status:     utils.Pointer("pending"),
 	}
 }
+
+// func (b *GridBot) rebaseOrders() {
+// 	// cancel all orders
+// 	orders, err := b.dao.GetOpenOrders(context.TODO(), b.Pair())
+// 	if err != nil && err != dao.ErrNotFound {
+// 		b.stopChan <- fmt.Errorf("failed to get open orders from database: %w", err)
+// 		return
+// 	}
+
+// 	orderIDs := make([]string, len(orders))
+// 	for i, order := range orders {
+// 		orderIDs[i] = *order.OrderID
+// 	}
+
+// 	if len(orders) > 0 {
+// 		err := b.krakenAPI.CancelOrderWithWebsocket(b.privateWS, b.token, orderIDs)
+// 		if err != nil {
+// 			b.stopChan <- fmt.Errorf("failed to cancel orders: %w", err)
+// 			return
+// 		}
+// 	}
+
+// 	// place new orders
+// 	basePrice := b.GetBasePrice()
+// 	buyBasePrice := basePrice
+// 	sellBasePrice := basePrice
+// 	for _, v := range b.config.multipliers {
+// 		buyBasePrice -= b.config.step * float64(v)
+// 		sellBasePrice += b.config.step * float64(v)
+// 		b.PlaceOrder(b.NewOrder(OrderBuy, buyBasePrice, v))
+// 		b.PlaceOrder(b.NewOrder(OrderSell, sellBasePrice, v))
+// 	}
+// }

@@ -28,8 +28,6 @@ type Bot interface {
 	Status() (string, string)
 	//Pair() string
 	GetStep() float64
-	GetBasePrice() float64
-	SetBasePrice(new float64)
 	PlaceOrder(order *model.Order)
 	NewOrder(side string, price float64, multiplier int) *model.Order
 }
@@ -158,10 +156,10 @@ func (b *GridBot) mainloop() {
 	}
 }
 
-func (b *GridBot) GetBasePrice() float64 {
-	return math.Float64frombits(atomic.LoadUint64((*uint64)(unsafe.Pointer(&b.config.basePrice))))
+func (b *GridBot) GetPrice() float64 {
+	return math.Float64frombits(atomic.LoadUint64((*uint64)(unsafe.Pointer(&b.config.currentPrice))))
 }
 
-func (b *GridBot) SetBasePrice(new float64) {
-	atomic.StoreUint64((*uint64)(unsafe.Pointer(&b.config.basePrice)), math.Float64bits(new))
+func (b *GridBot) SetPrice(new float64) {
+	atomic.StoreUint64((*uint64)(unsafe.Pointer(&b.config.currentPrice)), math.Float64bits(new))
 }

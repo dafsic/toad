@@ -18,7 +18,7 @@ func (s *server) Stop(ctx context.Context, req *pb.StopRequest) (*pb.Response, e
 }
 
 func (s *server) Run(ctx context.Context, req *pb.RunRequest) (*pb.Response, error) {
-	err := s.api.Run(req.BasePrice)
+	err := s.api.Run()
 	if err != nil {
 		s.logger.Error("Failed to run bot", zap.Error(err))
 		return &pb.Response{

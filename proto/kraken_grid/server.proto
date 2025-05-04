@@ -9,7 +9,6 @@ service KrakenGridService {
   rpc Run(RunRequest) returns (Response) {}
   rpc Status(StatusRequest) returns (StatusResponse) {}
   rpc PlaceOrder(PlaceOrderRequest) returns (Response) {}
-  rpc SetBasePrice(SetBasePriceRequest) returns (Response) {}
 }
 
 message StopRequest {
@@ -17,7 +16,7 @@ message StopRequest {
 }
 
 message RunRequest {
-  double base_price = 1; // Base price for the order
+  string request_id = 1; // Unique identifier for the run request
 }
 
 message StatusRequest {
@@ -28,10 +27,6 @@ message PlaceOrderRequest {
   string side = 1;       // Order direction: "buy" or "sell"
   int32 multiplier = 2;  // Price multiplier, used to calculate the actual price
   double price = 3;      // Price at which to place the order
-}
-
-message SetBasePriceRequest {
-  double base_price = 1; // Base price for the order
 }
 
 message Response {

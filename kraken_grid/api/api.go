@@ -5,11 +5,10 @@ import (
 )
 
 type API interface {
-	Run(basePrice float64) error
+	Run() error
 	Stop(reason string)
 	Status() (string, string)
 	PlaceOrder(side string, multiplier int, price float64) error
-	SetBasePrice(price float64)
 }
 
 type api struct {
@@ -24,8 +23,7 @@ func NewAPI(bot bot.Bot) *api {
 	}
 }
 
-func (a *api) Run(basePrice float64) error {
-	a.bot.SetBasePrice(basePrice)
+func (a *api) Run() error {
 	return a.bot.Run()
 }
 
@@ -40,8 +38,4 @@ func (a *api) Status() (string, string) {
 func (a *api) PlaceOrder(side string, multiplier int, price float64) error {
 	a.bot.PlaceOrder(a.bot.NewOrder(side, price, multiplier))
 	return nil
-}
-
-func (a *api) SetBasePrice(price float64) {
-	a.bot.SetBasePrice(price)
 }

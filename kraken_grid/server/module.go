@@ -95,8 +95,3 @@ func (s *GRPCServer) Run(ctx context.Context, req *pb.RunRequest) (*pb.Response,
 func (s *GRPCServer) Status(ctx context.Context, req *pb.StatusRequest) (*pb.StatusResponse, error) {
 	return s.Server.Status(ctx, req)
 }
-
-// SetBasePrice implements the gRPC interface, forwarding requests to our service implementation
-func (s *GRPCServer) SetBasePrice(ctx context.Context, req *pb.SetBasePriceRequest) (*pb.Response, error) {
-	return s.Server.SetBasePrice(ctx, req)
-}

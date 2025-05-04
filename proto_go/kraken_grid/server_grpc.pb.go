@@ -19,11 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	KrakenGridService_Stop_FullMethodName         = "/kraken_grid.KrakenGridService/Stop"
-	KrakenGridService_Run_FullMethodName          = "/kraken_grid.KrakenGridService/Run"
-	KrakenGridService_Status_FullMethodName       = "/kraken_grid.KrakenGridService/Status"
-	KrakenGridService_PlaceOrder_FullMethodName   = "/kraken_grid.KrakenGridService/PlaceOrder"
-	KrakenGridService_SetBasePrice_FullMethodName = "/kraken_grid.KrakenGridService/SetBasePrice"
+	KrakenGridService_Stop_FullMethodName       = "/kraken_grid.KrakenGridService/Stop"
+	KrakenGridService_Run_FullMethodName        = "/kraken_grid.KrakenGridService/Run"
+	KrakenGridService_Status_FullMethodName     = "/kraken_grid.KrakenGridService/Status"
+	KrakenGridService_PlaceOrder_FullMethodName = "/kraken_grid.KrakenGridService/PlaceOrder"
 )
 
 // KrakenGridServiceClient is the client API for KrakenGridService service.
@@ -34,7 +33,6 @@ type KrakenGridServiceClient interface {
 	Run(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*Response, error)
 	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	PlaceOrder(ctx context.Context, in *PlaceOrderRequest, opts ...grpc.CallOption) (*Response, error)
-	SetBasePrice(ctx context.Context, in *SetBasePriceRequest, opts ...grpc.CallOption) (*Response, error)
 }
 
 type krakenGridServiceClient struct {
@@ -85,16 +83,6 @@ func (c *krakenGridServiceClient) PlaceOrder(ctx context.Context, in *PlaceOrder
 	return out, nil
 }
 
-func (c *krakenGridServiceClient) SetBasePrice(ctx context.Context, in *SetBasePriceRequest, opts ...grpc.CallOption) (*Response, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Response)
-	err := c.cc.Invoke(ctx, KrakenGridService_SetBasePrice_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // KrakenGridServiceServer is the server API for KrakenGridService service.
 // All implementations must embed UnimplementedKrakenGridServiceServer
 // for forward compatibility.
@@ -103,7 +91,6 @@ type KrakenGridServiceServer interface {
 	Run(context.Context, *RunRequest) (*Response, error)
 	Status(context.Context, *StatusRequest) (*StatusResponse, error)
 	PlaceOrder(context.Context, *PlaceOrderRequest) (*Response, error)
-	SetBasePrice(context.Context, *SetBasePriceRequest) (*Response, error)
 	mustEmbedUnimplementedKrakenGridServiceServer()
 }
 
@@ -125,9 +112,6 @@ func (UnimplementedKrakenGridServiceServer) Status(context.Context, *StatusReque
 }
 func (UnimplementedKrakenGridServiceServer) PlaceOrder(context.Context, *PlaceOrderRequest) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PlaceOrder not implemented")
-}
-func (UnimplementedKrakenGridServiceServer) SetBasePrice(context.Context, *SetBasePriceRequest) (*Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetBasePrice not implemented")
 }
 func (UnimplementedKrakenGridServiceServer) mustEmbedUnimplementedKrakenGridServiceServer() {}
 func (UnimplementedKrakenGridServiceServer) testEmbeddedByValue()                           {}
@@ -222,24 +206,6 @@ func _KrakenGridService_PlaceOrder_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _KrakenGridService_SetBasePrice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetBasePriceRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(KrakenGridServiceServer).SetBasePrice(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: KrakenGridService_SetBasePrice_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KrakenGridServiceServer).SetBasePrice(ctx, req.(*SetBasePriceRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // KrakenGridService_ServiceDesc is the grpc.ServiceDesc for KrakenGridService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -262,10 +228,6 @@ var KrakenGridService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PlaceOrder",
 			Handler:    _KrakenGridService_PlaceOrder_Handler,
-		},
-		{
-			MethodName: "SetBasePrice",
-			Handler:    _KrakenGridService_SetBasePrice_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

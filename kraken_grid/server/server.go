@@ -14,7 +14,6 @@ type Server interface {
 	Run(ctx context.Context, req *pb.RunRequest) (*pb.Response, error)
 	Status(ctx context.Context, req *pb.StatusRequest) (*pb.StatusResponse, error)
 	PlaceOrder(ctx context.Context, req *pb.PlaceOrderRequest) (*pb.Response, error)
-	SetBasePrice(ctx context.Context, req *pb.SetBasePriceRequest) (*pb.Response, error)
 }
 
 // server implements the Server interface

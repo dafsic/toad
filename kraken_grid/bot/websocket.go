@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/dafsic/toad/kraken_grid/model"
@@ -108,27 +107,7 @@ func (b *GridBot) handleTickerChannel(message map[string]any) {
 	}
 	b.logger.Info("WebSocket ticker message",
 		zap.Float64("current price", b.config.currentPrice),
-		zap.Float64("base price", b.GetBasePrice()),
 	)
-
-	basePrice := b.GetBasePrice()
-	if b.config.autoRebase {
-		if math.Abs(b.config.currentPrice-basePrice) > b.threshold {
-			b.logger.Info("Price exceeded threshold",
-				zap.Float64("current price", b.config.currentPrice),
-				zap.Float64("base price", basePrice),
-			)
-			b.config.timer.Start()
-			if b.config.timer.IsExpired() {
-				b.config.timer.Reset()
-				b.SetBasePrice(b.config.currentPrice)
-				b.rebaseOrders()
-			}
-		} else {
-			b.config.timer.Reset()
-		}
-	}
-
 }
 
 func (b *GridBot) handleExecutionsChannel(message map[string]any) {

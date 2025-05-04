@@ -109,6 +109,7 @@ func (socket *Socket) send(messageType int, data []byte) error {
 func (socket *Socket) Close() {
 	socket.mux.Lock()
 	if socket.Conn == nil {
+		socket.mux.Unlock()
 		return
 	}
 	socket.mux.Unlock()

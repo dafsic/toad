@@ -23,22 +23,12 @@ func (m *Module) Configure(app *cli.App) {
 		&cli.Float64Flag{
 			Name:    "grid_step",
 			EnvVars: []string{"GRID_STEP"},
-			Value:   0.00005,
+			Value:   0.00001,
 		},
 		&cli.Float64Flag{
 			Name:    "grid_amount",
 			EnvVars: []string{"GRID_AMOUNT"},
 			Value:   1.0,
-		},
-		&cli.Float64Flag{
-			Name:    "base_price",
-			EnvVars: []string{"BASE_PRICE"},
-			Value:   0,
-		},
-		&cli.BoolFlag{
-			Name:    "auto_rebase",
-			EnvVars: []string{"AUTO_REBASE"},
-			Value:   false,
 		},
 	)
 }
@@ -57,14 +47,8 @@ func (m *Module) Install(ctx *cli.Context) fx.Option {
 	if ctx.IsSet("grid_amount") {
 		options = append(options, fx.Supply(fx.Annotate(WithGridAmount(ctx.Float64("grid_amount")), fx.ResultTags(`group:"options"`))))
 	}
-	if ctx.IsSet("base_price") {
-		options = append(options, fx.Supply(fx.Annotate(WithBasePrice(ctx.Float64("base_price")), fx.ResultTags(`group:"options"`))))
-	}
 	if ctx.IsSet("multipliers") {
 		options = append(options, fx.Supply(fx.Annotate(WithMultipliers(ctx.String("multipliers")), fx.ResultTags(`group:"options"`))))
-	}
-	if ctx.IsSet("auto_rebase") {
-		options = append(options, fx.Supply(fx.Annotate(WithAutoRebase(ctx.Bool("auto_rebase")), fx.ResultTags(`group:"options"`))))
 	}
 	options = append(options,
 		fx.Provide(fx.Annotate(NewConfig, fx.ParamTags(`group:"options"`))),

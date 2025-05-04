@@ -4,8 +4,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-
-	"github.com/dafsic/toad/utils"
 )
 
 type Config struct {
@@ -14,16 +12,7 @@ type Config struct {
 	step         float64 // Step size for the grid
 	amount       float64 // Amount of BaseCoin per grid order
 	multipliers  []int   // Multipliers for the grid orders
-	basePrice    float64 // Base price for the grid(optional, default is current price)
-	autoRebase   bool    // If true, the base price will be adjusted automatically
 	currentPrice float64 // Current price of the market
-	// If the current price stays above the base price plus step size for the full interval duration,
-	// the base price will be adjusted and orders will be rebalanced.
-	interval int64
-	// Timer for the grid bot
-	// It will be used to check if the current price is above the base price plus step size
-	// for the full interval duration
-	timer *utils.Timer
 }
 
 type Option func(*Config)
@@ -37,12 +26,6 @@ func WithSetp(step float64) Option {
 func WithGridAmount(amount float64) Option {
 	return func(c *Config) {
 		c.amount = amount
-	}
-}
-
-func WithBasePrice(price float64) Option {
-	return func(c *Config) {
-		c.basePrice = price
 	}
 }
 
@@ -71,31 +54,17 @@ func WithMultipliers(multipliers string) Option {
 	}
 }
 
-func WithInterval(interval int64) Option {
-	return func(c *Config) {
-		c.interval = interval
-	}
-}
-
-func WithAutoRebase(autoRebase bool) Option {
-	return func(c *Config) {
-		c.autoRebase = autoRebase
-	}
-}
-
 func NewConfig(opts ...Option) *Config {
 	cfg := &Config{
-		step:        0.00005,
+		step:        0.00001,
 		amount:      1,
 		baseCoin:    "XMR",
 		quoteCoin:   "BTC",
-		multipliers: []int{1, 1, 8},
-		interval:    600,
+		multipliers: []int{5, 5, 10, 40},
 	}
 	for _, opt := range opts {
 		opt(cfg)
 	}
-	cfg.timer = utils.NewTimer(cfg.interval)
 	// Sort the multipliers in ascending order
 	slices.SortFunc(cfg.multipliers, func(a, b int) int {
 		return a - b

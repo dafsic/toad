@@ -57,8 +57,7 @@ func (s *GinServer) botStop(c *gin.Context) {
 }
 
 type RunBotRequest struct {
-	Bot       string  `json:"bot" binding:"required"`
-	BasePrice float64 `json:"base_price" binding:"required"`
+	Bot string `json:"bot" binding:"required"`
 }
 
 type RunBotResponse struct {
@@ -88,7 +87,7 @@ func (s *GinServer) botRun(c *gin.Context) {
 
 	s.logger.Info("Running bot", zap.String("bot", req.Bot))
 
-	resp, err := client.Run(c.Request.Context(), &pb.RunRequest{BasePrice: req.BasePrice})
+	resp, err := client.Run(c.Request.Context(), &pb.RunRequest{})
 	if err != nil {
 		s.logger.Error("Failed to run bot", zap.String("bot", req.Bot), zap.Error(err))
 		c.JSON(http.StatusInternalServerError, RunBotResponse{

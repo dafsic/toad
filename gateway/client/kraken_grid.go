@@ -57,32 +57,8 @@ func (c *KrakenGridClient) Close() error {
 	return nil
 }
 
-// PlaceOrder sends an order request to the gRPC server
-// func (c *KrakenGridClient) PlaceOrder(ctx context.Context, side string, multiplier int32, price float64) (bool, string, error) {
-// 	resp, err := c.grpcClient.PlaceOrder(ctx, &pb.PlaceOrderRequest{
-// 		Side:       side,
-// 		Multiplier: multiplier,
-// 		Price:      price,
-// 	})
-
-// 	if err != nil {
-// 		c.logger.Error("gRPC PlaceOrder failed", zap.Error(err))
-// 		return false, "", err
-// 	}
-
-// 	c.logger.Info("Order placed via gRPC",
-// 		zap.Bool("success", resp.Success),
-// 		zap.String("message", resp.Message))
-
-// 	return resp.Success, resp.Message, nil
-// }
-
 func (c *KrakenGridClient) PlaceOrder(ctx context.Context, req *pb.PlaceOrderRequest) (*pb.Response, error) {
 	return c.grpcClient.PlaceOrder(ctx, req)
-}
-
-func (c *KrakenGridClient) SetBasePrice(ctx context.Context, req *pb.SetBasePriceRequest) (*pb.Response, error) {
-	return c.grpcClient.SetBasePrice(ctx, req)
 }
 
 func (c *KrakenGridClient) Run(ctx context.Context, req *pb.RunRequest) (*pb.Response, error) {

@@ -63,13 +63,12 @@ func NewBotService(config Config, logger *zap.Logger) (*BotService, error) {
 
 	// Register command handlers
 	service.commands = map[string]commandHandler{
-		"status":   service.handleStatusCommand,
-		"run":      service.handleRunCommand,
-		"stop":     service.handleStopCommand,
-		"order":    service.handleOrderCommand,
-		"setprice": service.handleSetPriceCommand,
-		"help":     service.handleHelpCommand,
-		"start":    service.handleStartCommand,
+		"status": service.handleStatusCommand,
+		"run":    service.handleRunCommand,
+		"stop":   service.handleStopCommand,
+		"order":  service.handleOrderCommand,
+		"help":   service.handleHelpCommand,
+		"start":  service.handleStartCommand,
 	}
 
 	logger.Info("Telegram bot created successfully", zap.String("bot_name", bot.Self.UserName))
@@ -165,27 +164,15 @@ func (s *BotService) handleStatusCommand(update tgbotapi.Update) string {
 
 // Handle /run command
 func (s *BotService) handleRunCommand(update tgbotapi.Update) string {
-	args := strings.Fields(update.Message.CommandArguments())
-
-	if len(args) < 1 {
-		return "Missing parameters. Usage: /run <base_price>"
-	}
-
-	basePrice, err := strconv.ParseFloat(args[0], 64)
-	if err != nil {
-		return "Invalid price format: " + err.Error()
-	}
-
 	s.logger.Info("Processing run command",
 		zap.Int64("user_id", update.Message.From.ID),
-		zap.String("username", update.Message.From.UserName),
-		zap.Float64("base_price", basePrice))
+		zap.String("username", update.Message.From.UserName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	req := &pb.RunRequest{
-		BasePrice: basePrice,
+		RequestId: fmt.Sprintf("tg_%d_%d", update.Message.From.ID, time.Now().Unix()),
 	}
 
 	resp, err := s.grpcClient.Run(ctx, req)
@@ -284,51 +271,13 @@ func (s *BotService) handleOrderCommand(update tgbotapi.Update) string {
 	return "Failed to place order: " + resp.Message
 }
 
-// Handle /setprice command
-func (s *BotService) handleSetPriceCommand(update tgbotapi.Update) string {
-	args := strings.Fields(update.Message.CommandArguments())
-
-	if len(args) < 1 {
-		return "Missing parameters. Usage: /setprice <base_price>"
-	}
-
-	basePrice, err := strconv.ParseFloat(args[0], 64)
-	if err != nil {
-		return "Invalid price format: " + err.Error()
-	}
-
-	s.logger.Info("Processing setprice command",
-		zap.Int64("user_id", update.Message.From.ID),
-		zap.String("username", update.Message.From.UserName),
-		zap.Float64("base_price", basePrice))
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	req := &pb.SetBasePriceRequest{
-		BasePrice: basePrice,
-	}
-
-	resp, err := s.grpcClient.SetBasePrice(ctx, req)
-	if err != nil {
-		s.logger.Error("SetBasePrice gRPC call failed", zap.Error(err))
-		return "Failed to set base price: " + err.Error()
-	}
-
-	if resp.Success {
-		return fmt.Sprintf("Base price successfully set to %.2f", basePrice)
-	}
-	return "Failed to set base price: " + resp.Message
-}
-
 // Handle /help command
 func (s *BotService) handleHelpCommand(update tgbotapi.Update) string {
 	return `Available commands:
 /status - Check system status
-/run <base_price> - Start the system with specified base price
+/run - Start the system
 /stop [reason] - Stop the system with optional reason
 /order <buy|sell> <multiplier> <price> - Place an order
-/setprice <base_price> - Set base price
 /help - Show this help message`
 }
 
