@@ -57,15 +57,6 @@ func (socket *Socket) setConnectionOptions() {
 	socket.WebsocketDialer.Proxy = socket.ConnectionOptions.Proxy
 	socket.WebsocketDialer.Subprotocols = socket.ConnectionOptions.Subprotocols
 	socket.WebsocketDialer.HandshakeTimeout = 30 * time.Second
-	// socket.WebsocketDialer.NetDial = func(network, addr string) (net.Conn, error) {
-	// 	dialer := &net.Dialer{
-	// 		LocalAddr: &net.TCPAddr{
-	// 			IP:   net.ParseIP("0.0.0.0"),
-	// 			Port: 0,
-	// 		},
-	// 	}
-	// 	return dialer.Dial(network, addr)
-	// }
 }
 
 func (socket *Socket) Connect() error {
@@ -149,6 +140,7 @@ func (socket *Socket) handleReadError(err error) {
 	socket.mux.Lock()
 	defer socket.mux.Unlock()
 	socket.Conn.Close()
+	socket.Conn = nil
 	switch e := err.(type) {
 	case *websocket.CloseError:
 		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {

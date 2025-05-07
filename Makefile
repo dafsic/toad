@@ -28,7 +28,7 @@ GO_LDFLAGS += -X '$(PROJECT)/app.version=$(GIT_TAG)'
 GO_LDFLAGS += -X '$(PROJECT)/app.git_tree_state=$(GIT_DIRTY)'
 
 .PHONY: default
-default: check proto gateway telegram kraken_grid
+default: check gateway telegram kraken_grid
 
 # --------------------------------------------------------------------------------
 # compile
