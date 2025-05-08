@@ -39,7 +39,7 @@ type GridBot struct {
 	// orders
 	dao dao.Dao
 	// websockets
-	publicWS  *websocket.Socket
+	//publicWS  *websocket.Socket
 	privateWS *websocket.Socket
 	// kraken
 	krakenAPI kraken.Kraken
@@ -112,7 +112,7 @@ func (b *GridBot) listenStop() {
 	b.logger.Error("Stopping bot...", zap.String("pair", b.Pair()), zap.Error(err))
 	utils.TurnOff(b.status)
 	b.privateWS.Close()
-	b.publicWS.Close()
+	//b.publicWS.Close()
 	close(b.stopChan)
 }
 
@@ -128,11 +128,6 @@ func (b *GridBot) mainloop() {
 	b.token = token.Token
 
 	// Initialize websockets
-	b.publicWS, err = b.newSocket(kraken.PublicWSURL)
-	if err != nil {
-		b.stopChan <- err
-		return
-	}
 	b.privateWS, err = b.newSocket(kraken.PrivateWSURL)
 	if err != nil {
 		b.stopChan <- err
@@ -140,10 +135,10 @@ func (b *GridBot) mainloop() {
 	}
 
 	// Subscribe to necessary channels
-	if err := b.krakenAPI.SubscribeTickers(b.publicWS, b.Pair()); err != nil {
-		b.stopChan <- err
-		return
-	}
+	// if err := b.krakenAPI.SubscribeTickers(b.publicWS, b.Pair()); err != nil {
+	// 	b.stopChan <- err
+	// 	return
+	// }
 	if err := b.krakenAPI.SubscribeExecutions(b.privateWS, b.token); err != nil {
 		b.stopChan <- err
 		return
