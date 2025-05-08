@@ -61,15 +61,21 @@ func (socket *Socket) setConnectionOptions() {
 
 func (socket *Socket) Connect() error {
 	var err error
+	var resp *http.Response
 	socket.setConnectionOptions()
 
-	socket.Conn, _, err = socket.WebsocketDialer.Dial(socket.Url, socket.RequestHeader)
+	socket.Conn, resp, err = socket.WebsocketDialer.Dial(socket.Url, socket.RequestHeader)
 	if err != nil {
 		// socket.logger.Panic("WebSocket connection error", zap.String("url", socket.Url), zap.Error(err))
 		return err
 	}
 
-	socket.logger.Info("Connected to server", zap.String("url", socket.Url), zap.String("addr", socket.Conn.LocalAddr().String()))
+	socket.logger.Info("Connected to server",
+		zap.String("url", socket.Url),
+		zap.String("addr", socket.Conn.LocalAddr().String()),
+		zap.String("remote_addr", socket.Conn.RemoteAddr().String()),
+		zap.Any("resp", resp),
+	)
 	utils.TurnOn(socket.ConnStatus)
 
 	go socket.readloop()
@@ -136,20 +142,12 @@ func (socket *Socket) Close() {
 }
 
 func (socket *Socket) handleReadError(err error) {
-	utils.TurnOff(socket.ConnStatus)
-	socket.mux.Lock()
-	defer socket.mux.Unlock()
-	socket.Conn.Close()
-	socket.Conn = nil
 	switch e := err.(type) {
 	case *websocket.CloseError:
-		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-			socket.logger.Info("WebSocket closed normally", zap.Int("code", e.Code), zap.String("url", socket.Url))
-			return
-		}
 		socket.logger.Error("WebSocket read error, reconnecting...", zap.Error(err), zap.Int("code", e.Code))
-		socket.reconnect()
-
+		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
+			socket.reconnect()
+		}
 	case *net.OpError:
 		socket.logger.Error("Network read error, reconnecting...", zap.Error(err), zap.String("op", e.Op), zap.String("net", e.Net))
 		socket.reconnect()
@@ -160,6 +158,11 @@ func (socket *Socket) handleReadError(err error) {
 }
 
 func (socket *Socket) reconnect() {
+	utils.TurnOff(socket.ConnStatus)
+	socket.mux.Lock()
+	defer socket.mux.Unlock()
+	socket.Conn.Close()
+	socket.Conn = nil
 	for i := range 5 {
 		time.Sleep(time.Minute)
 		socket.logger.Info("Reconnecting to server", zap.Int("count", i), zap.String("url", socket.Url))
