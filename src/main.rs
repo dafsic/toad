@@ -103,9 +103,38 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("bind")?;
     axum::serve(listener, router)
+        .with_graceful_shutdown(shutdown_signal())
         .await
         .context("axum serve")?;
 
+    tracing::info!("shutdown complete");
     Ok(())
+}
+
+/// 监听 SIGINT（Ctrl+C）和 SIGTERM（kill / Docker stop），任一触发即返回。
+async fn shutdown_signal() {
+    use tokio::signal;
+
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler")
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install SIGTERM handler")
+            .recv()
+            .await
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => { tracing::info!("received Ctrl+C, shutting down") },
+        _ = terminate => { tracing::info!("received SIGTERM, shutting down") },
+    }
 }
 

@@ -250,7 +250,7 @@ pub async fn start(state: Arc<AppState>) -> anyhow::Result<()> {
 
     Dispatcher::builder(bot, handler)
         .dependencies(dptree::deps![state])
-        .enable_ctrlc_handler()
+        // 不启用 teloxide 自带的 Ctrl+C 处理，由主进程统一处理退出信号
         .build()
         .dispatch()
         .await;
