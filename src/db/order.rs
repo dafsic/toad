@@ -64,6 +64,15 @@ pub struct OrderFilter<'a> {
     pub is_auto: Option<bool>,
 }
 
+/// 游标分页参数：按 `id DESC` 排序，`before_id` 为上一页最后一条的 id。
+#[derive(Debug)]
+pub struct PageParams {
+    /// 返回 id < before_id 的记录；None 表示从最新开始
+    pub before_id: Option<i64>,
+    /// 每页条数，上限 100
+    pub limit: i64,
+}
+
 // ── CRUD 函数 ─────────────────────────────────────────────────────────────────
 
 /// 插入一条新订单，返回自增 `id`。
@@ -117,11 +126,10 @@ pub async fn get_order_by_exchange_id(
     pool: &SqlitePool,
     exchange_order_id: &str,
 ) -> anyhow::Result<Option<Order>> {
-    let row = sqlx::query_as!(
-        Order,
+    let row = sqlx::query_as::<_, Order>(
         "SELECT * FROM orders WHERE exchange_order_id = ? AND status = 'open' LIMIT 1",
-        exchange_order_id
     )
+    .bind(exchange_order_id)
     .fetch_optional(pool)
     .await
     .context("get_order_by_exchange_id")?;
@@ -130,17 +138,23 @@ pub async fn get_order_by_exchange_id(
 
 /// 查询所有 status = 'open' 的订单（引擎重启恢复用）。
 pub async fn list_open_orders(pool: &SqlitePool) -> anyhow::Result<Vec<Order>> {
-    let rows = sqlx::query_as!(Order, "SELECT * FROM orders WHERE status = 'open'")
+    let rows = sqlx::query_as::<_, Order>("SELECT * FROM orders WHERE status = 'open'")
         .fetch_all(pool)
         .await
         .context("list_open_orders")?;
     Ok(rows)
 }
 
-/// 带过滤条件的订单列表查询（API 用）。
+/// 带过滤条件和游标分页的订单列表查询（API 用）。
 ///
-/// sqlx 的 `query_as!` 不支持动态 WHERE，这里使用 `QueryBuilder` 拼接。
-pub async fn list_orders(pool: &SqlitePool, filter: &OrderFilter<'_>) -> anyhow::Result<Vec<Order>> {
+/// 按 `id DESC` 排序；`page.before_id` 为上一页最后一条的 id（不含）。
+/// 返回最多 `page.limit` 条（上限 100）。
+pub async fn list_orders_page(
+    pool: &SqlitePool,
+    filter: &OrderFilter<'_>,
+    page: &PageParams,
+) -> anyhow::Result<Vec<Order>> {
+    let limit = page.limit.clamp(1, 100);
     let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
         "SELECT * FROM orders WHERE 1=1",
     );
@@ -155,17 +169,19 @@ pub async fn list_orders(pool: &SqlitePool, filter: &OrderFilter<'_>) -> anyhow:
         qb.push(" AND status = ").push_bind(status);
     }
     if let Some(is_auto) = filter.is_auto {
-        let v = is_auto as i64;
-        qb.push(" AND is_auto = ").push_bind(v);
+        qb.push(" AND is_auto = ").push_bind(is_auto as i64);
+    }
+    if let Some(before_id) = page.before_id {
+        qb.push(" AND id < ").push_bind(before_id);
     }
 
-    qb.push(" ORDER BY id DESC");
+    qb.push(" ORDER BY id DESC LIMIT ").push_bind(limit);
 
     let rows = qb
         .build_query_as::<Order>()
         .fetch_all(pool)
         .await
-        .context("list_orders")?;
+        .context("list_orders_page")?;
     Ok(rows)
 }
 

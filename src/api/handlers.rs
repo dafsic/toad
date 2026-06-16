@@ -1,6 +1,18 @@
-use axum::{extract::{Path, Query, State}, Json};
+use axum::{
+    extract::{Path, Query, State},
+    http::StatusCode,
+    Json,
+};
 use serde::{Deserialize, Serialize};
+
 use crate::api::AppState;
+use crate::db::order::{
+    CreateOrder, OrderFilter, PageParams, UpdateOrderStatus,
+    get_order, insert_order, list_orders_page,
+    set_exchange_order_id, set_order_status,
+};
+use crate::exchange::OrderRequest;
+use crate::sse::SseEvent;
 
 // ── 请求 / 响应结构体 ─────────────────────────────────────────────────────────
 
@@ -11,20 +23,31 @@ pub struct CreateOrderRequest {
     pub quantity: f64,
     pub price: f64,
     pub price_change: f64,
-    /// 杠杆倍数。Kraken 现货固定为 1，Hyperliquid 永续合约由用户指定（≥1）。
-    /// 若未传入，默认值为 1。
+    /// 杠杆倍数。Kraken 现货固定为 1，Hyperliquid ≥1。默认 1。
     #[serde(default = "default_leverage")]
     pub leverage: u32,
 }
 
-fn default_leverage() -> u32 { 1 }
+fn default_leverage() -> u32 {
+    1
+}
 
+/// 游标分页 + 过滤查询参数。
 #[derive(Debug, Deserialize)]
 pub struct ListOrdersQuery {
     pub exchange: Option<String>,
     pub side: Option<String>,
     pub status: Option<String>,
     pub is_auto: Option<bool>,
+    /// 上一页最后一条记录的 id，不传则从最新开始
+    pub before_id: Option<i64>,
+    /// 每页条数，默认 20，最大 100
+    #[serde(default = "default_limit")]
+    pub limit: i64,
+}
+
+fn default_limit() -> i64 {
+    20
 }
 
 #[derive(Debug, Serialize)]
@@ -36,7 +59,7 @@ pub struct OrderResponse {
     pub quantity: f64,
     pub price: f64,
     pub price_change: f64,
-    pub leverage: u32,
+    pub leverage: i64,
     pub is_auto: bool,
     pub parent_order_id: Option<i64>,
     pub exchange_order_id: Option<String>,
@@ -46,40 +69,216 @@ pub struct OrderResponse {
     pub updated_at: String,
 }
 
+/// 游标分页响应。
+#[derive(Debug, Serialize)]
+pub struct PageResponse {
+    pub items: Vec<OrderResponse>,
+    /// 下一页游标：取本页最后一条的 id。若为 null 表示已无更多数据。
+    pub next_cursor: Option<i64>,
+}
+
+// ── 错误辅助 ──────────────────────────────────────────────────────────────────
+
+fn internal(e: anyhow::Error) -> (StatusCode, String) {
+    tracing::error!("{e:#}");
+    (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+}
+
+fn bad_request(msg: &str) -> (StatusCode, String) {
+    (StatusCode::BAD_REQUEST, msg.to_string())
+}
+
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
-/// POST /api/orders — 手动下单
+/// `POST /api/orders` — 手动下单
+///
+/// 流程：先写 pending 记录 → 向交易所提交 → 回填 exchange_order_id + status=open。
+/// Kraken 现货强制 leverage=1。
 pub async fn create_order(
-    State(_state): State<AppState>,
-    Json(_req): Json<CreateOrderRequest>,
-) -> Json<OrderResponse> {
-    // TODO:
-    // 1. 验证参数（exchange 合法、quantity/price/price_change > 0、leverage >= 1）
-    // 2. Kraken 下单时强制 leverage = 1
-    // 3. 调用对应 ExchangeAdapter::place_limit_order
-    // 4. 将订单写入数据库（status='open', is_auto=0, leverage=req.leverage）
-    // 5. 通过 SSE 推送新订单事件
-    todo!()
+    State(state): State<AppState>,
+    Json(req): Json<CreateOrderRequest>,
+) -> Result<(StatusCode, Json<OrderResponse>), (StatusCode, String)> {
+    // 参数校验
+    if req.exchange != "kraken" && req.exchange != "hyperliquid" {
+        return Err(bad_request("exchange must be 'kraken' or 'hyperliquid'"));
+    }
+    if req.side != "buy" && req.side != "sell" {
+        return Err(bad_request("side must be 'buy' or 'sell'"));
+    }
+    if req.quantity <= 0.0 {
+        return Err(bad_request("quantity must be > 0"));
+    }
+    if req.price <= 0.0 {
+        return Err(bad_request("price must be > 0"));
+    }
+    if req.price_change <= 0.0 {
+        return Err(bad_request("price_change must be > 0"));
+    }
+
+    let leverage = if req.exchange == "kraken" { 1 } else { req.leverage.max(1) };
+
+    // 1. 先写 pending 记录（防止崩溃丢单）
+    let id = insert_order(&state.db, &CreateOrder {
+        exchange:          &req.exchange,
+        symbol:            "XMR/USDC",
+        side:              &req.side,
+        quantity:          req.quantity,
+        price:             req.price,
+        price_change:      req.price_change,
+        leverage,
+        is_auto:           false,
+        parent_order_id:   None,
+        exchange_order_id: None,
+        status:            "pending",
+    })
+    .await
+    .map_err(internal)?;
+
+    // 2. 向交易所提交
+    let adapter = if req.exchange == "hyperliquid" {
+        state.hyperliquid.clone()
+    } else {
+        state.kraken.clone()
+    };
+
+    let confirmation = adapter
+        .place_limit_order(&OrderRequest {
+            symbol:   "XMR/USDC".to_string(),
+            side:     req.side.clone(),
+            quantity: req.quantity,
+            price:    req.price,
+            leverage,
+        })
+        .await;
+
+    match confirmation {
+        Ok(conf) => {
+            set_exchange_order_id(&state.db, id, &conf.exchange_order_id)
+                .await
+                .map_err(internal)?;
+            set_order_status(&state.db, &UpdateOrderStatus { id, status: "open" })
+                .await
+                .map_err(internal)?;
+        }
+        Err(e) => {
+            let _ = set_order_status(&state.db, &UpdateOrderStatus { id, status: "failed" }).await;
+            return Err((StatusCode::BAD_GATEWAY, format!("exchange error: {e:#}")));
+        }
+    }
+
+    let order = get_order(&state.db, id)
+        .await
+        .map_err(internal)?
+        .ok_or_else(|| internal(anyhow::anyhow!("order {id} disappeared after insert")))?;
+
+    let _ = state.sse_tx.send(SseEvent::OrderCreated { order_id: id });
+
+    Ok((StatusCode::CREATED, Json(order_to_response(order))))
 }
 
-/// GET /api/orders — 查询挂单列表（支持筛选）
+/// `GET /api/orders` — 游标分页查询订单列表
+///
+/// 查询参数：
+/// - `exchange`  过滤交易所（kraken / hyperliquid）
+/// - `side`      过滤方向（buy / sell）
+/// - `status`    过滤状态（pending / open / filled / cancelled / failed）
+/// - `is_auto`   过滤是否自动生成（true / false）
+/// - `before_id` 游标：上一页最后一条的 id，不传从最新开始
+/// - `limit`     每页条数，默认 20，最大 100
 pub async fn list_orders(
-    State(_state): State<AppState>,
-    Query(_query): Query<ListOrdersQuery>,
-) -> Json<Vec<OrderResponse>> {
-    // TODO: 按条件 SELECT FROM orders
-    todo!()
+    State(state): State<AppState>,
+    Query(q): Query<ListOrdersQuery>,
+) -> Result<Json<PageResponse>, (StatusCode, String)> {
+    let filter = OrderFilter {
+        exchange: q.exchange.as_deref(),
+        side:     q.side.as_deref(),
+        status:   q.status.as_deref(),
+        is_auto:  q.is_auto,
+    };
+    let page = PageParams {
+        before_id: q.before_id,
+        limit:     q.limit,
+    };
+
+    let orders = list_orders_page(&state.db, &filter, &page)
+        .await
+        .map_err(internal)?;
+
+    let next_cursor = if orders.len() as i64 == page.limit.clamp(1, 100) {
+        orders.last().map(|o| o.id)
+    } else {
+        None
+    };
+
+    Ok(Json(PageResponse {
+        items: orders.into_iter().map(order_to_response).collect(),
+        next_cursor,
+    }))
 }
 
-/// DELETE /api/orders/:id — 取消挂单
+/// `DELETE /api/orders/:id` — 取消挂单
 pub async fn cancel_order(
-    State(_state): State<AppState>,
-    Path(_id): Path<i64>,
-) -> axum::http::StatusCode {
-    // TODO:
-    // 1. 查询订单，确认 status='open'
-    // 2. 调用 ExchangeAdapter::cancel_order
-    // 3. 更新数据库 status='cancelled'
-    // 4. 通过 SSE 推送取消事件
-    todo!()
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let order = get_order(&state.db, id)
+        .await
+        .map_err(internal)?
+        .ok_or((StatusCode::NOT_FOUND, format!("order {id} not found")))?;
+
+    if order.status != "open" {
+        return Err(bad_request(&format!(
+            "order {id} is '{}', only 'open' orders can be cancelled",
+            order.status
+        )));
+    }
+
+    let exchange_order_id = order
+        .exchange_order_id
+        .as_deref()
+        .ok_or_else(|| bad_request("order has no exchange_order_id yet"))?;
+
+    let adapter = if order.exchange == "hyperliquid" {
+        state.hyperliquid.clone()
+    } else {
+        state.kraken.clone()
+    };
+
+    adapter
+        .cancel_order(exchange_order_id, &order.symbol)
+        .await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, format!("exchange error: {e:#}")))?;
+
+    set_order_status(&state.db, &UpdateOrderStatus { id, status: "cancelled" })
+        .await
+        .map_err(internal)?;
+
+    let _ = state.sse_tx.send(SseEvent::OrderUpdated {
+        order_id: id,
+        status: "cancelled".to_string(),
+    });
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+// ── 辅助转换 ──────────────────────────────────────────────────────────────────
+
+fn order_to_response(o: crate::db::order::Order) -> OrderResponse {
+    OrderResponse {
+        id:                o.id,
+        exchange:          o.exchange,
+        symbol:            o.symbol,
+        side:              o.side,
+        quantity:          o.quantity,
+        price:             o.price,
+        price_change:      o.price_change,
+        leverage:          o.leverage,
+        is_auto:           o.is_auto != 0,
+        parent_order_id:   o.parent_order_id,
+        exchange_order_id: o.exchange_order_id,
+        status:            o.status,
+        filled_price:      o.filled_price,
+        created_at:        o.created_at,
+        updated_at:        o.updated_at,
+    }
 }

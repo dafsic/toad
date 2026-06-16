@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use futures::StreamExt;
 use hypersdk::Address;
 use hypersdk::hypercore::{
-    self, Chain, NonceHandler, PrivateKeySigner,
+    self, NonceHandler, PrivateKeySigner,
     types::{
         BatchCancel, BatchOrder, Cancel, Fill, Incoming, OrderGrouping, OrderResponseStatus,
         OrderTypePlacement, Side as HlSide, Subscription, TimeInForce,
