@@ -29,3 +29,12 @@ export interface CreateOrderRequest {
     price_change: number
     /** 杠杆倍数；Kraken 传 1，Hyperliquid 传实际杠杆（≥1）。默认 1。 */
     leverage?: number
+}
+
+export interface ListOrdersQuery {
+    exchange?: Exchange
+    side?: Side
+    status?: OrderStatus
+    is_auto?: boolean
+}
+

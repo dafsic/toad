@@ -57,4 +57,3 @@ impl Config {
         <Self as Parser>::parse()
     }
 }
-

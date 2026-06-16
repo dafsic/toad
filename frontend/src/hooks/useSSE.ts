@@ -1,19 +1,46 @@
 import { useEffect } from 'react'
 
-/**
- * 订阅后端 SSE 事件流（GET /api/sse）。
- * 收到事件后触发对应的状态更新（如刷新订单列表）。
- *
- * 事件类型（与后端 SseEvent 对应）：
- *   - order_created: { order_id }
- *   - order_updated: { order_id, status }
- */
-export function useSSE() {
+type SseEvent =
+    | { type: 'order_created'; order_id: number }
+    | { type: 'order_updated'; order_id: number; status: string }
+
+export function useSSE(
+    onOrderCreated: (id: number) => void,
+    onOrderUpdated: (id: number, status: string) => void,
+) {
     useEffect(() => {
-        // TODO:
-        // const es = new EventSource('/api/sse')
-        // es.onmessage = (e) => { const event = JSON.parse(e.data); ... }
-        // es.onerror = () => { /* 重连逻辑 */ }
-        // return () => es.close()
-    }, [])
+        let es: EventSource
+        let retryTimer: ReturnType<typeof setTimeout>
+
+        function connect() {
+            es = new EventSource('/api/sse')
+
+            es.onmessage = (e) => {
+                try {
+                    const event = JSON.parse(e.data) as SseEvent
+                    if (event.type === 'order_created') {
+                        onOrderCreated(event.order_id)
+                    } else if (event.type === 'order_updated') {
+                        onOrderUpdated(event.order_id, event.status)
+                    }
+                } catch {
+                    // ignore parse errors
+                }
+            }
+
+            es.onerror = () => {
+                es.close()
+                // EventSource auto-reconnects, but add a small delay to avoid tight loops
+                retryTimer = setTimeout(connect, 3000)
+            }
+        }
+
+        connect()
+
+        return () => {
+            clearTimeout(retryTimer)
+            es?.close()
+        }
+    }, [onOrderCreated, onOrderUpdated])
 }
+
