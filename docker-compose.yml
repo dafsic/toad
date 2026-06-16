@@ -1,0 +1,11 @@
+services:
+  toad:
+    build: .
+    image: toad:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    env_file:
+      - .env

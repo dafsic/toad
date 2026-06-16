@@ -1,0 +1,66 @@
+[package]
+name = "toad"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "toad"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Web framework
+axum = { version = "0.8", features = ["macros"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+
+# Configuration
+clap = { version = "4", features = ["derive", "env"] }
+dotenvy = "0.15"
+
+# Database
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio", "macros", "migrate"] }
+
+# Telegram Bot
+teloxide = { version = "0.13", features = ["macros"] }
+
+# HTTP client (reqwest 0.13 required by hypersdk)
+reqwest = { version = "0.13", features = ["json"] }
+
+# WebSocket (for Kraken; Hyperliquid uses hypersdk's built-in WebSocket)
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
+
+# Hyperliquid SDK（使用最新 git 主分支，0.2.x crates.io 版本类型结构已过时）
+hypersdk = { git = "https://github.com/infinitefield/hypersdk" }
+rust_decimal = { version = "1", features = ["maths"] }
+
+# Async trait support
+async-trait = "0.1"
+futures = { version = "0.3", default-features = false, features = ["std"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Embed frontend assets
+rust-embed = { version = "8", features = ["axum"] }
+mime_guess = "2"
+
+# Logging & tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "2"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+# Kraken API signing
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+base64 = "0.22"
