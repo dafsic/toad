@@ -24,16 +24,16 @@ export default function OrderFilter({ filters, onChange }: Props) {
     return (
         <div className="flex flex-wrap items-center gap-2">
             {/* Status tabs */}
-            <div className="flex rounded-md border overflow-hidden">
+            <div className="flex rounded-lg border border-border overflow-hidden bg-muted">
                 {STATUSES.map(s => (
                     <button
                         key={s.value}
                         onClick={() => set('status', s.value as OrderStatus | '')}
                         className={cn(
-                            'px-3 py-1 text-xs transition-colors',
+                            'px-3 py-1.5 text-xs font-medium transition-colors',
                             filters.status === s.value
-                                ? 'bg-primary text-primary-foreground'
-                                : 'hover:bg-secondary text-muted-foreground',
+                                ? 'bg-xmr text-white'
+                                : 'hover:bg-secondary text-muted-foreground hover:text-foreground',
                         )}
                     >
                         {s.label}
@@ -45,7 +45,7 @@ export default function OrderFilter({ filters, onChange }: Props) {
             <select
                 value={filters.exchange}
                 onChange={e => set('exchange', e.target.value as Exchange | '')}
-                className="rounded-md border bg-secondary px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-xmr focus:ring-1 focus:ring-xmr/20 text-foreground"
             >
                 <option value="">全部交易所</option>
                 <option value="kraken">Kraken</option>
@@ -56,7 +56,7 @@ export default function OrderFilter({ filters, onChange }: Props) {
             <select
                 value={filters.side}
                 onChange={e => set('side', e.target.value as Side | '')}
-                className="rounded-md border bg-secondary px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-xmr focus:ring-1 focus:ring-xmr/20 text-foreground"
             >
                 <option value="">买/卖</option>
                 <option value="buy">买入</option>
@@ -67,7 +67,7 @@ export default function OrderFilter({ filters, onChange }: Props) {
             <select
                 value={filters.is_auto === undefined ? '' : String(filters.is_auto)}
                 onChange={e => set('is_auto', e.target.value === '' ? undefined : e.target.value === 'true')}
-                className="rounded-md border bg-secondary px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-xmr focus:ring-1 focus:ring-xmr/20 text-foreground"
             >
                 <option value="">手动+自动</option>
                 <option value="false">仅手动</option>

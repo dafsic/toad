@@ -38,18 +38,20 @@ export function LoginPage() {
 
     return (
         <div className="min-h-screen bg-background flex flex-col font-mono">
-            {/* Header — same as main page */}
+            {/* Header */}
             <header className="px-6 py-4 border-b border-border flex items-center">
-                <span className="text-sm font-bold tracking-widest uppercase text-foreground">TOAD</span>
+                <span className="text-xl">🐸</span>
                 <span className="mx-2 text-border select-none">·</span>
-                <span className="text-sm text-xmr tracking-wider">XMR/USDC</span>
+                <span className="text-sm font-semibold text-xmr">XMR/USDC</span>
+                <span className="ml-2 text-xs text-muted-foreground">GRID BOT</span>
             </header>
 
             <div className="flex-1 flex items-center justify-center p-4">
                 <div className="w-full max-w-sm">
-                    {/* Panel with Monero orange left border */}
-                    <div className="border border-border border-l-xmr border-l-2 bg-card rounded-lg overflow-hidden">
-                        <div className="px-5 py-3 border-b border-border">
+                    {/* Panel */}
+                    <div className="border border-border bg-card rounded-xl overflow-hidden">
+                        <div className="px-5 py-3 border-b border-border bg-secondary flex items-center gap-2">
+                            <span className="h-3 w-3 rounded-full bg-xmr inline-block flex-shrink-0" />
                             <span className="text-xs font-bold tracking-widest uppercase">
                                 TELEGRAM AUTH
                             </span>
@@ -76,7 +78,7 @@ export function LoginPage() {
                                                 setCopied(true)
                                                 setTimeout(() => setCopied(false), 2000)
                                             }}
-                                            className="w-full flex items-center justify-between rounded border border-border bg-secondary px-4 py-3 text-sm hover:border-xmr transition-colors group"
+                                            className="w-full flex items-center justify-between rounded-lg border border-border bg-secondary px-4 py-3 text-sm hover:border-xmr transition-colors group"
                                         >
                                             <span className="text-foreground">
                                                 /login <span className="font-bold tracking-widest">{code}</span>

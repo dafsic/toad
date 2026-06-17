@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { cancelOrder } from '@/lib/api'
 import type { Order, OrderStatus } from '@/types/order'
 import { cn } from '@/lib/utils'
+import ExchangeLogo from '@/components/ExchangeLogo'
 
 interface Props {
     items: Order[]
@@ -50,9 +51,9 @@ export default function OrderList({ items, loading, error, nextCursor, onLoadMor
     }
 
     return (
-        <div className="rounded-lg border bg-card flex flex-col">
-            <div className="px-4 py-3 border-b flex items-center justify-between">
-                <span className="font-semibold text-sm">订单列表</span>
+        <div className="border border-border bg-card rounded-xl shadow-sm flex flex-col">
+            <div className="px-4 py-3 border-b border-border bg-secondary flex items-center justify-between">
+                <span className="font-bold text-sm tracking-wide">Orders</span>
                 {loading && <span className="text-xs text-muted-foreground animate-pulse">加载中…</span>}
             </div>
 
@@ -61,11 +62,11 @@ export default function OrderList({ items, loading, error, nextCursor, onLoadMor
             )}
 
             {items.length === 0 && !loading ? (
-                <div className="px-4 py-8 text-center text-muted-foreground text-xs">暂无订单</div>
+                <div className="px-4 py-10 text-center text-muted-foreground text-xs tracking-wider">NO ORDERS YET</div>
             ) : (
                 <>
                     {/* Header */}
-                    <div className="grid grid-cols-[auto_80px_50px_80px_80px_80px_70px_56px] gap-2 px-4 py-2 border-b text-xs text-muted-foreground">
+                    <div className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_1fr_56px] gap-2 px-4 py-2 border-b border-border bg-secondary text-xs text-muted-foreground tracking-widest uppercase">
                         <span>ID</span>
                         <span>交易所</span>
                         <span>方向</span>
@@ -113,7 +114,7 @@ function OrderRow({ order, cancelling, onCancel }: {
 
     return (
         <div className={cn(
-            'grid grid-cols-[auto_80px_50px_80px_80px_80px_70px_56px] gap-2 px-4 py-2 text-xs hover:bg-secondary/30 transition-colors items-center',
+            'grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_1fr_56px] gap-2 px-4 py-2.5 text-xs hover:bg-secondary/60 transition-colors items-center border-b border-border/50 last:border-0',
             order.status === 'filled' && 'opacity-60',
             order.status === 'cancelled' && 'opacity-40',
         )}>
@@ -121,7 +122,10 @@ function OrderRow({ order, cancelling, onCancel }: {
                 #{order.id}
                 {order.is_auto && <span className="ml-1 text-[10px] opacity-60">🤖</span>}
             </span>
-            <span className="truncate capitalize">{order.exchange}</span>
+            <span className="flex items-center gap-1.5 truncate">
+                <ExchangeLogo exchange={order.exchange} size={14} />
+                <span className="capitalize text-xs">{order.exchange === 'kraken' ? 'Kraken' : 'HL'}</span>
+            </span>
             <span className={cn('font-medium', sideColor)}>
                 {order.side === 'buy' ? '买' : '卖'}
             </span>

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { createOrder } from '@/lib/api'
 import type { Exchange, Side } from '@/types/order'
 import { cn } from '@/lib/utils'
+import ExchangeLogo from '@/components/ExchangeLogo'
 
 interface Props {
     exchange: Exchange
@@ -47,30 +48,33 @@ export default function ExchangePanel({ exchange, onCreated }: Props) {
     }
 
     return (
-        <div className="border border-border border-l-xmr border-l-2 bg-card rounded-lg overflow-hidden flex flex-col">
+        <div className="border border-border bg-card rounded-xl overflow-hidden flex flex-col">
             {/* Exchange header */}
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                <span className="text-xs font-bold tracking-widest uppercase text-foreground">
-                    {exchange === 'kraken' ? 'Kraken' : 'Hyperliquid'}
-                </span>
-                <span className="text-xs text-xmr tracking-wider">XMR/USDC</span>
+            <div className="px-4 py-3 border-b border-border bg-secondary flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <ExchangeLogo exchange={exchange} size={24} />
+                    <span className="text-sm font-bold tracking-wide text-foreground">
+                        {exchange === 'kraken' ? 'Kraken' : 'Hyperliquid'}
+                    </span>
+                </div>
+                <span className="text-xs font-medium text-xmr">XMR/USDC</span>
             </div>
 
             <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
                 {/* Buy / Sell */}
-                <div className="grid grid-cols-2 gap-1">
+                <div className="grid grid-cols-2 gap-1 p-1 bg-secondary rounded-lg">
                     {(['buy', 'sell'] as Side[]).map(s => (
                         <button
                             key={s}
                             type="button"
                             onClick={() => setSide(s)}
                             className={cn(
-                                'py-2 text-xs font-bold tracking-widest uppercase rounded transition-colors',
+                                'py-2 text-xs font-bold tracking-widest uppercase rounded-md transition-all',
                                 side === s
                                     ? s === 'buy'
-                                        ? 'bg-green-600 text-white'
-                                        : 'bg-red-600 text-white'
-                                    : 'bg-secondary text-muted-foreground hover:text-foreground',
+                                        ? 'bg-green-600 text-white shadow-sm'
+                                        : 'bg-red-600 text-white shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground',
                             )}
                         >
                             {s === 'buy' ? 'BUY' : 'SELL'}
@@ -84,8 +88,9 @@ export default function ExchangePanel({ exchange, onCreated }: Props) {
 
                 {isHyperliquid && (
                     <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground tracking-widest uppercase">
-                            LEVERAGE ×{leverage}
+                        <label className="text-xs text-muted-foreground tracking-widest uppercase flex justify-between">
+                            <span>LEVERAGE</span>
+                            <span className="text-foreground font-bold">×{leverage}</span>
                         </label>
                         <input
                             type="range"
@@ -101,8 +106,8 @@ export default function ExchangePanel({ exchange, onCreated }: Props) {
 
                 {error && <p className="text-xs text-red-400 break-all">{error}</p>}
                 {successId !== null && (
-                    <p className="text-xs text-green-400 tracking-wider">
-                        ORDER #{successId} SUBMITTED
+                    <p className="text-xs text-green-400 tracking-wider font-medium">
+                        ✓ ORDER #{successId} SUBMITTED
                     </p>
                 )}
 
@@ -110,7 +115,7 @@ export default function ExchangePanel({ exchange, onCreated }: Props) {
                     type="submit"
                     disabled={loading}
                     className={cn(
-                        'w-full rounded py-2 text-xs font-bold tracking-widest uppercase transition-colors',
+                        'w-full rounded-lg py-2.5 text-sm font-bold tracking-widest uppercase transition-all',
                         side === 'buy'
                             ? 'bg-green-600 hover:bg-green-500 text-white'
                             : 'bg-red-600 hover:bg-red-500 text-white',
@@ -146,7 +151,7 @@ function Field({
                 value={value}
                 onChange={e => onChange(e.target.value)}
                 placeholder={placeholder}
-                className="w-full rounded border border-border bg-secondary px-3 py-1.5 text-sm font-mono outline-none focus:border-xmr focus:ring-0 placeholder:text-muted-foreground/40 transition-colors"
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm font-mono outline-none focus:border-xmr focus:ring-1 focus:ring-xmr/20 placeholder:text-muted-foreground/40 transition-colors"
             />
         </div>
     )

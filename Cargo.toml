@@ -68,6 +68,9 @@ sha2 = "0.10"
 hex = "0.4"
 base64 = "0.22"
 
+# TLS crypto provider（防止多依赖同时启用 aws-lc-rs 和 ring 冲突）
+rustls = { version = "0.23", features = ["aws_lc_rs"], default-features = false }
+
 # Authentication
 jsonwebtoken = "9"
 rand = "0.8"

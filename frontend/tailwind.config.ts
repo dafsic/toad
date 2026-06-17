@@ -11,7 +11,7 @@ export default {
                 foreground: '#e6edf3',
                 card: '#111820',
                 border: '#2a3a50',
-                primary: '#3fb950',
+                primary: '#f26822',
                 'primary-foreground': '#0a0e14',
                 secondary: '#1d2535',
                 muted: '#1d2535',

@@ -16,6 +16,10 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // 0. 在任何 TLS 连接建立前安装 rustls crypto provider
+    //    Clash TUN 等代理工具会同时激活 aws-lc-rs 和 ring，导致 rustls 无法自动选择
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+
     // 1. 初始化 tracing（RUST_LOG 控制级别，默认 info）
     fmt()
         .with_env_filter(

@@ -60,15 +60,16 @@ export default function App() {
     return (
         <div className="min-h-screen bg-background font-mono">
             <header className="px-6 py-4 border-b border-border flex items-center justify-between">
-                <div className="flex items-center">
-                    <span className="text-sm font-bold tracking-widest uppercase text-foreground">TOAD</span>
-                    <span className="mx-2 text-border select-none">·</span>
-                    <span className="text-sm text-xmr tracking-wider">XMR/USDC</span>
+                <div className="flex items-center gap-3">
+                    <span className="text-xl">🐸</span>
+                    <span className="text-border select-none">·</span>
+                    <span className="text-sm font-semibold text-xmr">XMR/USDC</span>
+                    <span className="text-xs text-muted-foreground">GRID BOT</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${state.error ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`} />
+                    <span className={`h-2 w-2 rounded-full flex-shrink-0 ${state.error ? 'bg-red-500' : 'bg-green-500'}`} />
                     <span className="text-xs text-muted-foreground tracking-widest uppercase">
-                        {state.error ? 'DISCONNECTED' : 'LIVE'}
+                        {state.error ? 'OFFLINE' : 'LIVE'}
                     </span>
                 </div>
             </header>
