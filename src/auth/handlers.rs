@@ -41,16 +41,14 @@ pub async fn request_login(State(state): State<AppState>) -> Json<LoginRequest> 
 
     tracing::info!(code, "generated login code");
 
-    state
-        .auth_store
-        .write()
-        .await
-        .insert(code.clone(), AuthSession {
-            code: code.clone(),
+    state.auth_store.write().await.insert(
+        code.clone(),
+        AuthSession {
             user_id: None,
             created_at: Instant::now(),
             tx: None, // 稍后在 wait_login 中填充
-        });
+        },
+    );
 
     Json(LoginRequest { code })
 }
@@ -102,21 +100,4 @@ pub async fn wait_login(
 
     let stream = ReceiverStream::new(receiver);
     Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
-}
-
-/// 从 Cookie 中提取并验证 token
-pub async fn verify_auth(state: &AppState, cookie_header: Option<&str>) -> Result<u64, StatusCode> {
-    let cookie_str = cookie_header.ok_or(StatusCode::UNAUTHORIZED)?;
-    let token = crate::auth::extract_token_from_cookie(cookie_str)
-        .ok_or(StatusCode::UNAUTHORIZED)?;
-
-    let claims = crate::auth::verify_token(&token, &state.config.jwt_secret)
-        .map_err(|_| StatusCode::UNAUTHORIZED)?;
-
-    // 验证 user_id 是否匹配配置
-    if claims.sub != state.config.allowed_telegram_user_id {
-        return Err(StatusCode::FORBIDDEN);
-    }
-
-    Ok(claims.sub)
 }

@@ -133,6 +133,10 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
+    // 阻塞直到收到关闭信号（Ctrl+C / SIGTERM）
+    shutdown_token.cancelled().await;
+    tracing::info!("triggering shutdown for all background tasks");
+
     // 等待所有后台任务完成（最多 10 秒）
     let wait_timeout = tokio::time::Duration::from_secs(10);
     let _ = tokio::time::timeout(wait_timeout, async {

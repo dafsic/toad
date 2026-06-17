@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 
 export function LoginPage() {
     const [code, setCode] = useState<string>('')
@@ -7,108 +7,101 @@ export function LoginPage() {
     const [copied, setCopied] = useState(false)
 
     useEffect(() => {
-        // 1. 请求验证码
         fetch('/api/auth/request', { method: 'POST' })
             .then((r) => r.json())
             .then((data: { code: string }) => {
                 setCode(data.code)
                 setLoading(false)
 
-                // 2. 建立 SSE 连接等待验证
                 const es = new EventSource(`/api/auth/wait/${data.code}`)
-
                 es.onmessage = (e) => {
                     try {
                         const { token } = JSON.parse(e.data)
-                        // 3. 设置 cookie 并跳转
-                        document.cookie = `auth_token=${token}; path=/; max-age=28800` // 8小时
+                        document.cookie = `auth_token=${token}; path=/; max-age=28800`
                         window.location.href = '/'
-                    } catch (err) {
-                        setError('登录失败，请刷新页面重试')
+                    } catch {
+                        setError('Login failed. Refresh and try again.')
                     } finally {
                         es.close()
                     }
                 }
-
                 es.onerror = () => {
                     es.close()
-                    setError('连接超时，请刷新页面重试')
+                    setError('Connection timeout. Refresh and try again.')
                 }
             })
             .catch(() => {
                 setLoading(false)
-                setError('获取验证码失败，请刷新页面')
+                setError('Failed to get code. Refresh the page.')
             })
     }, [])
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
-                <div className="text-white text-xl">加载中...</div>
-            </div>
-        )
-    }
-
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-4">
-            <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-800 mb-2">🐸 Toad Grid Bot</h1>
-                    <p className="text-gray-600">Telegram 身份验证</p>
-                </div>
+        <div className="min-h-screen bg-background flex flex-col font-mono">
+            {/* Header — same as main page */}
+            <header className="px-6 py-4 border-b border-border flex items-center">
+                <span className="text-sm font-bold tracking-widest uppercase text-foreground">TOAD</span>
+                <span className="mx-2 text-border select-none">·</span>
+                <span className="text-sm text-xmr tracking-wider">XMR/USDC</span>
+            </header>
 
-                {error ? (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                        <p className="text-red-800 text-sm">{error}</p>
+            <div className="flex-1 flex items-center justify-center p-4">
+                <div className="w-full max-w-sm">
+                    {/* Panel with Monero orange left border */}
+                    <div className="border border-border border-l-xmr border-l-2 bg-card rounded-lg overflow-hidden">
+                        <div className="px-5 py-3 border-b border-border">
+                            <span className="text-xs font-bold tracking-widest uppercase">
+                                TELEGRAM AUTH
+                            </span>
+                        </div>
+
+                        <div className="p-5 space-y-5">
+                            {loading && !error && (
+                                <p className="text-xs text-muted-foreground tracking-widest animate-pulse">
+                                    INITIALIZING···
+                                </p>
+                            )}
+
+                            {error ? (
+                                <p className="text-xs text-red-400">{error}</p>
+                            ) : code ? (
+                                <>
+                                    <div className="space-y-2">
+                                        <p className="text-xs text-muted-foreground tracking-widest uppercase">
+                                            Send to bot
+                                        </p>
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(`/login ${code}`)
+                                                setCopied(true)
+                                                setTimeout(() => setCopied(false), 2000)
+                                            }}
+                                            className="w-full flex items-center justify-between rounded border border-border bg-secondary px-4 py-3 text-sm hover:border-xmr transition-colors group"
+                                        >
+                                            <span className="text-foreground">
+                                                /login <span className="font-bold tracking-widest">{code}</span>
+                                            </span>
+                                            <span className="text-xs text-muted-foreground tracking-widest group-hover:text-xmr transition-colors">
+                                                {copied ? '✓ COPIED' : 'COPY'}
+                                            </span>
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+                                        <span className="text-xs text-muted-foreground tracking-widest uppercase">
+                                            Waiting for verification
+                                        </span>
+                                    </div>
+
+                                    <p className="text-xs text-muted-foreground/40 tracking-wide">
+                                        Code expires in 5 minutes
+                                    </p>
+                                </>
+                            ) : null}
+                        </div>
                     </div>
-                ) : (
-                    <>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-                            <p className="text-gray-700 mb-4 text-sm">
-                                请在 Telegram 中给 Bot 发送以下完整命令：
-                            </p>
-                            <button
-                                onClick={() => {
-                                    navigator.clipboard.writeText(`/login ${code}`)
-                                    setCopied(true)
-                                    setTimeout(() => setCopied(false), 2000)
-                                }}
-                                className="w-full bg-white rounded border-2 border-blue-300 hover:border-blue-500 p-4 font-mono text-center cursor-pointer transition-colors"
-                            >
-                                <span className="text-lg font-bold text-gray-800">/login {code}</span>
-                                <span className="block text-xs text-gray-400 mt-1">
-                                    {copied ? '✅ 已复制！' : '点击复制'}
-                                </span>
-                            </button>
-                        </div>
-
-                        <div className="text-center">
-                            <div className="inline-flex items-center text-gray-600 text-sm">
-                                <svg
-                                    className="animate-spin h-4 w-4 mr-2"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                >
-                                    <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                    />
-                                    <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                    />
-                                </svg>
-                                等待 Telegram 验证...
-                            </div>
-                            <p className="text-xs text-gray-500 mt-4">验证码 5 分钟内有效</p>
-                        </div>
-                    </>
-                )}
+                </div>
             </div>
         </div>
     )

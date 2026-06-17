@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import OrderForm from '@/components/OrderForm'
+import ExchangePanel from '@/components/ExchangePanel'
 import OrderFilter from '@/components/OrderFilter'
 import OrderList from '@/components/OrderList'
 import { useOrders } from '@/hooks/useOrders'
@@ -58,20 +58,30 @@ export default function App() {
 
     // 已认证，显示主页面
     return (
-        <div className="min-h-screen bg-background p-4 lg:p-6">
-            <header className="mb-6 flex items-center justify-between">
-                <div>
-                    <h1 className="text-lg font-bold tracking-tight">🐸 Toad Grid Bot</h1>
-                    <p className="text-xs text-muted-foreground">XMR/USDC 无限链式反向网格</p>
+        <div className="min-h-screen bg-background font-mono">
+            <header className="px-6 py-4 border-b border-border flex items-center justify-between">
+                <div className="flex items-center">
+                    <span className="text-sm font-bold tracking-widest uppercase text-foreground">TOAD</span>
+                    <span className="mx-2 text-border select-none">·</span>
+                    <span className="text-sm text-xmr tracking-wider">XMR/USDC</span>
                 </div>
-                <div className={`h-2 w-2 rounded-full ${state.error ? 'bg-red-500' : 'bg-green-500'}`}
-                    title={state.error ?? 'connected'} />
+                <div className="flex items-center gap-2">
+                    <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${state.error ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`} />
+                    <span className="text-xs text-muted-foreground tracking-widest uppercase">
+                        {state.error ? 'DISCONNECTED' : 'LIVE'}
+                    </span>
+                </div>
             </header>
 
-            <main className="grid gap-4 lg:grid-cols-[380px_1fr]">
-                <OrderForm onCreated={onOrderCreated} />
+            <main className="p-4 lg:p-6 space-y-4">
+                {/* Two exchange panels side by side */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <ExchangePanel exchange="kraken" onCreated={onOrderCreated} />
+                    <ExchangePanel exchange="hyperliquid" onCreated={onOrderCreated} />
+                </div>
 
-                <div className="flex flex-col gap-3">
+                {/* Order list spanning full width */}
+                <div className="space-y-3">
                     <OrderFilter filters={state.filters} onChange={setFilters} />
                     <OrderList
                         items={state.items}

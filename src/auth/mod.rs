@@ -23,8 +23,6 @@ pub struct Claims {
 
 /// 登录会话（用于验证码等待期间）
 pub struct AuthSession {
-    /// 6位验证码
-    pub code: String,
     /// 验证成功后的 Telegram user_id
     pub user_id: Option<u64>,
     /// 创建时间（5分钟后自动过期）

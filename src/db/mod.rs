@@ -1,10 +1,9 @@
 use anyhow::Context;
-use sqlx::{SqlitePool, sqlite::SqliteConnectOptions, sqlite::SqlitePoolOptions};
+use sqlx::{sqlite::SqliteConnectOptions, sqlite::SqlitePoolOptions, SqlitePool};
 use std::str::FromStr;
 
 pub mod order;
 
-pub use order::{CreateOrder, Order, UpdateOrderFilled, UpdateOrderStatus};
 /// 初始化 SQLite 连接池并执行所有 migrations。
 ///
 /// `database_url` 格式：`sqlite:data/bot.db` 或裸路径 `data/bot.db`。
