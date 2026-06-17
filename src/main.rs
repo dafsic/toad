@@ -10,7 +10,8 @@ mod sse;
 use std::sync::Arc;
 
 use anyhow::Context;
-use tracing_subscriber::{EnvFilter, fmt};
+use tokio_util::sync::CancellationToken;
+use tracing_subscriber::{fmt, EnvFilter};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -35,12 +36,11 @@ async fn main() -> anyhow::Result<()> {
         .context("init db")?;
 
     // 4. 构建交易所适配器
-    let kraken: Arc<dyn exchange::ExchangeAdapter> = Arc::new(
-        exchange::kraken::KrakenAdapter::new(
+    let kraken: Arc<dyn exchange::ExchangeAdapter> =
+        Arc::new(exchange::kraken::KrakenAdapter::new(
             config.kraken_api_key.clone(),
             config.kraken_api_secret.clone(),
-        ),
-    );
+        ));
 
     let hyperliquid: Arc<dyn exchange::ExchangeAdapter> = Arc::new(
         exchange::hyperliquid::HyperliquidAdapter::new(
@@ -52,10 +52,13 @@ async fn main() -> anyhow::Result<()> {
         .context("init hyperliquid adapter")?,
     );
 
-    // 5. 创建 SSE broadcast channel
+    // 5. 创建全局关闭信号 token
+    let shutdown_token = CancellationToken::new();
+
+    // 6. 创建 SSE broadcast channel
     let sse_tx = sse::create_channel(128);
 
-    // 6. 构建共享 AppState
+    // 7. 构建共享 AppState
     let state = Arc::new(api::AppState {
         config: Arc::clone(&config),
         db: pool.clone(),
@@ -64,8 +67,8 @@ async fn main() -> anyhow::Result<()> {
         sse_tx: sse_tx.clone(),
     });
 
-    // 7. 启动 Grid Engine（独立 task，内部自动重连并恢复 open 订单）
-    {
+    // 8. 启动 Grid Engine（独立 task，内部自动重连并恢复 open 订单）
+    let engine_handle = {
         let engine = engine::GridEngine::new(
             pool.clone(),
             Arc::clone(&kraken),
@@ -73,39 +76,53 @@ async fn main() -> anyhow::Result<()> {
             sse_tx.clone(),
             Arc::clone(&config),
         );
+        let token = shutdown_token.clone();
         tokio::spawn(async move {
-            if let Err(e) = engine.run().await {
+            if let Err(e) = engine.run(token).await {
                 tracing::error!("grid engine exited: {e:#}");
             }
-        });
-    }
+        })
+    };
 
-    // 8. 启动 Telegram Bot（独立 task）
-    {
+    // 9. 启动 Telegram Bot（独立 task）
+    let bot_handle = {
         let bot_state = Arc::clone(&state);
+        let token = shutdown_token.clone();
         tokio::spawn(async move {
-            if let Err(e) = bot::start(bot_state).await {
+            if let Err(e) = bot::start(bot_state, token).await {
                 tracing::error!("telegram bot exited: {e:#}");
             }
-        });
-    }
+        })
+    };
 
-    // 9. 启动 Axum HTTP 服务器（阻塞直到进程退出）
-    let addr: std::net::SocketAddr = config
-        .server_addr
-        .parse()
-        .context("invalid SERVER_ADDR")?;
+    // 10. 启动 Axum HTTP 服务器（阻塞直到收到关闭信号）
+    let addr: std::net::SocketAddr = config.server_addr.parse().context("invalid SERVER_ADDR")?;
 
     let router = api::router((*state).clone());
 
     tracing::info!(%addr, "http server listening");
-    let listener = tokio::net::TcpListener::bind(addr)
-        .await
-        .context("bind")?;
-    axum::serve(listener, router)
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .context("axum serve")?;
+    let listener = tokio::net::TcpListener::bind(addr).await.context("bind")?;
+
+    // 启动 HTTP 服务器
+    let server_handle = tokio::spawn(async move {
+        axum::serve(listener, router)
+            .with_graceful_shutdown(shutdown_signal())
+            .await
+    });
+
+    // 等待关闭信号
+    server_handle.await??;
+
+    // 触发所有后台任务关闭
+    tracing::info!("triggering shutdown for all background tasks");
+    shutdown_token.cancel();
+
+    // 等待后台任务完成（最多等待 10 秒）
+    let wait_timeout = tokio::time::Duration::from_secs(10);
+    let _ = tokio::time::timeout(wait_timeout, async {
+        let _ = tokio::join!(engine_handle, bot_handle);
+    })
+    .await;
 
     tracing::info!("shutdown complete");
     Ok(())
@@ -137,4 +154,3 @@ async fn shutdown_signal() {
         _ = terminate => { tracing::info!("received SIGTERM, shutting down") },
     }
 }
-

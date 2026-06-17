@@ -36,6 +36,22 @@ Co-Authored-By: Claude Sonnet 4.6 <claude-sonnet-4-6@anthropic.com>
 - `sqlx::query!` macros require `DATABASE_URL` env var at compile time — set it or use a `.env` file
 - Frontend dev proxy: `vite.config.ts` already routes `/api` → `http://localhost:3000`
 
+## Shutdown & Recovery
+
+### Graceful Shutdown
+- Uses `tokio_util::sync::CancellationToken` for coordinated shutdown
+- Ctrl+C / SIGTERM triggers token cancellation
+- All background tasks (GridEngine, exchange listeners, Telegram Bot) monitor the token
+- Main waits up to 10 seconds for all tasks to complete
+
+### Startup Recovery (Downtime Order Sync)
+- `GridEngine::run()` calls `sync_order_status_on_startup()` for each `status='open'` order
+- Queries exchange via `ExchangeAdapter::get_order_status()`
+- **filled** → uses `order.price` as filled_price (not exact, but maintains chain integrity) → triggers `handle_fill()` → creates reverse order
+- **cancelled** → updates DB to `cancelled`, sends SSE + Telegram notification
+- **open** → continues listening
+- **Limitation**: Cannot retrieve exact fill price from exchange status API; uses order price instead. For exact fill prices, would need to extend trait with `get_fill_details()` method calling trade history APIs.
+
 ## Environment Variables
 
 ```

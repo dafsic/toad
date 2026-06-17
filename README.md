@@ -90,6 +90,39 @@ sell 成交 →  buy  挂单，价格 = filled_price - price_change
 
 ---
 
+## 停机恢复机制
+
+程序重启时会**主动检查**所有 `status='open'` 订单在停机期间的状态变化：
+
+### 恢复流程
+
+1. **加载未完成订单** — 从数据库查询所有 `status='open'` 的订单
+2. **查询交易所状态** — 逐个调用交易所 API 查询最新状态
+3. **状态同步**：
+   - **已成交** → 使用挂单价格触发链式反向下单（保持网格完整性）
+   - **已取消** → 更新数据库并发送 Telegram 通知
+   - **仍挂单** → 继续监听成交事件
+
+### 重要说明
+
+⚠️ **成交价格限制**
+
+由于交易所 API 限制，停机期间成交的订单无法获取精确成交价格，系统会使用**挂单价格**作为成交价来计算反向订单价格。这可能导致轻微的价格偏差，但可以保证网格链式的完整性。
+
+如需精确成交价格，建议：
+- 保持程序 24/7 运行，由 WebSocket 实时接收成交事件
+- 或者在停机期间避免订单成交（如设置较窄的价格区间）
+
+### 日志示例
+
+```
+2026-06-17T12:00:00Z INFO toad: restoring open orders from db count=3
+2026-06-17T12:00:01Z WARN toad::engine: order filled during downtime, triggering chain recovery with order price id=42
+2026-06-17T12:00:01Z INFO toad::engine: reverse grid leg placed new_id=43
+```
+
+---
+
 ## 开发
 
 ```bash

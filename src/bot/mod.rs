@@ -7,6 +7,7 @@ use teloxide::{
     types::{Message, ParseMode},
     utils::command::BotCommands,
 };
+use tokio_util::sync::CancellationToken;
 
 use crate::api::AppState;
 use crate::db::order::{
@@ -226,7 +227,7 @@ async fn handle_cancel(bot: Bot, msg: Message, args: String, state: Arc<AppState
 // ── 公共入口 ──────────────────────────────────────────────────────────────────
 
 /// 启动 Telegram Bot（在独立 tokio task 中运行）。
-pub async fn start(state: Arc<AppState>) -> anyhow::Result<()> {
+pub async fn start(state: Arc<AppState>, shutdown_token: CancellationToken) -> anyhow::Result<()> {
     let bot = Bot::new(&state.config.telegram_bot_token);
 
     let handler = Update::filter_message()
@@ -248,12 +249,19 @@ pub async fn start(state: Arc<AppState>) -> anyhow::Result<()> {
                 .endpoint(|bot, msg, args, state| handle_cancel(bot, msg, args, state)),
         );
 
-    Dispatcher::builder(bot, handler)
+    let mut dispatcher = Dispatcher::builder(bot, handler)
         .dependencies(dptree::deps![state])
-        // 不启用 teloxide 自带的 Ctrl+C 处理，由主进程统一处理退出信号
-        .build()
-        .dispatch()
-        .await;
+        .build();
+
+    // 用 tokio::select! 监听关闭信号
+    tokio::select! {
+        _ = shutdown_token.cancelled() => {
+            tracing::info!("telegram bot received shutdown signal");
+        }
+        _ = dispatcher.dispatch() => {
+            tracing::warn!("telegram bot dispatcher exited unexpectedly");
+        }
+    }
 
     Ok(())
 }
