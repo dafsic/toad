@@ -1,18 +1,36 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import OrderForm from '@/components/OrderForm'
 import OrderFilter from '@/components/OrderFilter'
 import OrderList from '@/components/OrderList'
 import { useOrders } from '@/hooks/useOrders'
 import { useSSE } from '@/hooks/useSSE'
+import { LoginPage } from '@/pages/LoginPage'
+
+function getCookie(name: string): string | null {
+    const value = `; ${document.cookie}`
+    const parts = value.split(`; ${name}=`)
+    if (parts.length === 2) return parts.pop()?.split(';').shift() ?? null
+    return null
+}
 
 export default function App() {
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+
+    // 检查认证状态
+    useEffect(() => {
+        const token = getCookie('auth_token')
+        setIsAuthenticated(!!token)
+    }, [])
+
     const { state, setFilters, loadMore, updateOrderStatus, onOrderCreated, fetchPage } = useOrders()
 
     // Initial load
     useEffect(() => {
-        fetchPage(state.filters)
+        if (isAuthenticated) {
+            fetchPage(state.filters)
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, [isAuthenticated])
 
     const handleSSECreated = useCallback(() => {
         onOrderCreated()
@@ -24,6 +42,21 @@ export default function App() {
 
     useSSE(handleSSECreated, handleSSEUpdated)
 
+    // 检查中
+    if (isAuthenticated === null) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-muted-foreground">Loading...</div>
+            </div>
+        )
+    }
+
+    // 未认证，显示登录页
+    if (!isAuthenticated) {
+        return <LoginPage />
+    }
+
+    // 已认证，显示主页面
     return (
         <div className="min-h-screen bg-background p-4 lg:p-6">
             <header className="mb-6 flex items-center justify-between">

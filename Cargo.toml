@@ -67,3 +67,8 @@ hmac = "0.12"
 sha2 = "0.10"
 hex = "0.4"
 base64 = "0.22"
+
+# Authentication
+jsonwebtoken = "9"
+rand = "0.8"
+tower-cookies = { version = "0.11", features = ["signed"] }

@@ -1,5 +1,6 @@
 mod api;
 mod assets;
+mod auth;
 mod bot;
 mod config;
 mod db;
@@ -58,16 +59,26 @@ async fn main() -> anyhow::Result<()> {
     // 6. 创建 SSE broadcast channel
     let sse_tx = sse::create_channel(128);
 
-    // 7. 构建共享 AppState
+    // 7. 创建认证会话存储并启动清理任务
+    let auth_store = auth::create_store();
+    {
+        let store = Arc::clone(&auth_store);
+        tokio::spawn(async move {
+            auth::cleanup_expired_sessions(store).await;
+        });
+    }
+
+    // 8. 构建共享 AppState
     let state = Arc::new(api::AppState {
         config: Arc::clone(&config),
         db: pool.clone(),
         kraken: Arc::clone(&kraken),
         hyperliquid: Arc::clone(&hyperliquid),
         sse_tx: sse_tx.clone(),
+        auth_store,
     });
 
-    // 8. 启动 Grid Engine（独立 task，内部自动重连并恢复 open 订单）
+    // 9. 启动 Grid Engine（独立 task，内部自动重连并恢复 open 订单）
     let engine_handle = {
         let engine = engine::GridEngine::new(
             pool.clone(),
@@ -84,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
         })
     };
 
-    // 9. 启动 Telegram Bot（独立 task）
+    // 10. 启动 Telegram Bot（独立 task）
     let bot_handle = {
         let bot_state = Arc::clone(&state);
         let token = shutdown_token.clone();
@@ -95,7 +106,7 @@ async fn main() -> anyhow::Result<()> {
         })
     };
 
-    // 10. 启动 Axum HTTP 服务器（阻塞直到收到关闭信号）
+    // 11. 启动 Axum HTTP 服务器（阻塞直到收到关闭信号）
     let addr: std::net::SocketAddr = config.server_addr.parse().context("invalid SERVER_ADDR")?;
 
     let router = api::router((*state).clone());

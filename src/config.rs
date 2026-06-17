@@ -46,7 +46,10 @@ pub struct Config {
     /// SQLite 数据库 URL
     #[arg(long, env = "DATABASE_URL", default_value = "sqlite:data/bot.db")]
     pub database_url: String,
-}
+    // ── Authentication ──────────────────────────────────────────────────
+    /// JWT 签名密钥（建议使用长随机字符串）
+    #[arg(long, env = "JWT_SECRET", default_value = "change-me-in-production")]
+    pub jwt_secret: String,}
 
 impl Config {
     /// 从命令行参数和环境变量解析配置。

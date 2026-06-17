@@ -58,6 +58,39 @@ Co-Authored-By: Claude Sonnet 4.6 <claude-sonnet-4-6@anthropic.com>
 TELEGRAM_BOT_TOKEN, ALLOWED_TELEGRAM_USER_ID
 KRAKEN_API_KEY, KRAKEN_API_SECRET
 HYPERLIQUID_PRIVATE_KEY, HYPERLIQUID_ACCOUNT_ADDRESS, HYPERLIQUID_TESTNET
+JWT_SECRET (default: change-me-in-production)
 DATABASE_URL (default: sqlite:data/bot.db), SERVER_ADDR (default: 0.0.0.0:3000)
 ```
+
+## Authentication
+
+### Flow
+1. **Frontend** → POST `/api/auth/request` → get 6-digit code
+2. **Frontend** → SSE `/api/auth/wait/:code` (long-polling for token)
+3. **User** → sends `/login <code>` to Telegram Bot
+4. **Bot** → verifies user_id → generates JWT → sends via oneshot channel to waiting SSE connection
+5. **Frontend** → receives token via SSE → sets cookie `auth_token` → redirects to `/`
+
+### JWT Structure
+- Claims: `{ sub: user_id (u64), exp: timestamp, iat: timestamp }`
+- Expiry: 8 hours from creation
+- Signing: HS256 with `JWT_SECRET`
+
+### Middleware
+- `src/auth/middleware.rs` — `auth_middleware()` protects `/api/orders`, `/api/sse`
+- Extracts token from `Cookie: auth_token=...`
+- Validates signature and expiry
+- Checks `claims.sub == config.allowed_telegram_user_id`
+- Returns 401 Unauthorized or 403 Forbidden on failure
+
+### Session Management
+- `AuthStore: Arc<RwLock<HashMap<String, AuthSession>>>`
+- Session lifecycle: created when frontend calls `/api/auth/request` → removed after 5 minutes or on successful login
+- Cleanup task runs every 60 seconds, removes expired sessions (older than 5 minutes)
+- Uses `tokio::sync::oneshot` channel to notify waiting SSE connection when Bot verifies
+
+### Routes
+- **Public**: `/api/auth/request`, `/api/auth/wait/:code`
+- **Protected** (requires auth middleware): `/api/orders`, `/api/sse`
+
 

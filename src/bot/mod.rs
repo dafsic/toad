@@ -11,8 +11,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::api::AppState;
 use crate::db::order::{
-    OrderFilter, PageParams, UpdateOrderStatus,
-    get_order, list_orders_page, set_order_status,
+    get_order, list_orders_page, set_order_status, OrderFilter, PageParams, UpdateOrderStatus,
 };
 use crate::exchange::ExchangeAdapter;
 use crate::sse::SseEvent;
@@ -24,12 +23,16 @@ use crate::sse::SseEvent;
 enum Command {
     #[command(description = "显示帮助信息")]
     Start,
-    #[command(description = "下单  /order <exchange> <side> <qty> <price> <price_change> [leverage]")]
+    #[command(
+        description = "下单  /order <exchange> <side> <qty> <price> <price_change> [leverage]"
+    )]
     Order(String),
     #[command(description = "查看当前挂单  /orders [open|filled|cancelled]")]
     Orders(String),
     #[command(description = "取消挂单  /cancel <id>")]
     Cancel(String),
+    #[command(description = "登录 Web 界面  /login <验证码>")]
+    Login(String),
 }
 
 // ── 权限校验 ──────────────────────────────────────────────────────────────────
@@ -59,7 +62,12 @@ async fn handle_start(bot: Bot, msg: Message, state: Arc<AppState>) -> ResponseR
 }
 
 /// `/order kraken buy 2.5 145.80 1.50 [leverage]`
-async fn handle_order(bot: Bot, msg: Message, args: String, state: Arc<AppState>) -> ResponseResult<()> {
+async fn handle_order(
+    bot: Bot,
+    msg: Message,
+    args: String,
+    state: Arc<AppState>,
+) -> ResponseResult<()> {
     if sender_id(&msg) != state.config.allowed_telegram_user_id {
         return reply(&bot, &msg, "⛔ 未授权").await;
     }
@@ -73,14 +81,28 @@ async fn handle_order(bot: Bot, msg: Message, args: String, state: Arc<AppState>
         ).await;
     }
 
-    let exchange    = parts[0];
-    let side        = parts[1];
-    let quantity:     f64 = match parts[2].parse() { Ok(v) => v, Err(_) => return reply(&bot, &msg, "❌ qty 无效").await };
-    let price:        f64 = match parts[3].parse() { Ok(v) => v, Err(_) => return reply(&bot, &msg, "❌ price 无效").await };
-    let price_change: f64 = match parts[4].parse() { Ok(v) => v, Err(_) => return reply(&bot, &msg, "❌ price_change 无效").await };
+    let exchange = parts[0];
+    let side = parts[1];
+    let quantity: f64 = match parts[2].parse() {
+        Ok(v) => v,
+        Err(_) => return reply(&bot, &msg, "❌ qty 无效").await,
+    };
+    let price: f64 = match parts[3].parse() {
+        Ok(v) => v,
+        Err(_) => return reply(&bot, &msg, "❌ price 无效").await,
+    };
+    let price_change: f64 = match parts[4].parse() {
+        Ok(v) => v,
+        Err(_) => return reply(&bot, &msg, "❌ price_change 无效").await,
+    };
     let leverage: u32 = if parts.len() >= 6 {
-        match parts[5].parse() { Ok(v) => v, Err(_) => return reply(&bot, &msg, "❌ leverage 无效").await }
-    } else { 1 };
+        match parts[5].parse() {
+            Ok(v) => v,
+            Err(_) => return reply(&bot, &msg, "❌ leverage 无效").await,
+        }
+    } else {
+        1
+    };
 
     // 基础校验
     if exchange != "kraken" && exchange != "hyperliquid" {
@@ -93,22 +115,31 @@ async fn handle_order(bot: Bot, msg: Message, args: String, state: Arc<AppState>
         return reply(&bot, &msg, "❌ qty/price/price_change 必须大于 0").await;
     }
 
-    let effective_leverage = if exchange == "kraken" { 1 } else { leverage.max(1) };
+    let effective_leverage = if exchange == "kraken" {
+        1
+    } else {
+        leverage.max(1)
+    };
 
     // 先写 pending 入库
-    let db_id = match crate::db::order::insert_order(&state.db, &crate::db::order::CreateOrder {
-        exchange,
-        symbol: "XMR/USDC",
-        side,
-        quantity,
-        price,
-        price_change,
-        leverage: effective_leverage,
-        is_auto: false,
-        parent_order_id: None,
-        exchange_order_id: None,
-        status: "pending",
-    }).await {
+    let db_id = match crate::db::order::insert_order(
+        &state.db,
+        &crate::db::order::CreateOrder {
+            exchange,
+            symbol: "XMR/USDC",
+            side,
+            quantity,
+            price,
+            price_change,
+            leverage: effective_leverage,
+            is_auto: false,
+            parent_order_id: None,
+            exchange_order_id: None,
+            status: "pending",
+        },
+    )
+    .await
+    {
         Ok(id) => id,
         Err(e) => return reply(&bot, &msg, &format!("❌ 数据库错误：{e:#}")).await,
     };
@@ -120,31 +151,57 @@ async fn handle_order(bot: Bot, msg: Message, args: String, state: Arc<AppState>
         Arc::clone(&state.kraken)
     };
 
-    match adapter.place_limit_order(&crate::exchange::OrderRequest {
-        symbol: "XMR/USDC".to_string(),
-        side: side.to_string(),
-        quantity,
-        price,
-        leverage: effective_leverage,
-    }).await {
+    match adapter
+        .place_limit_order(&crate::exchange::OrderRequest {
+            symbol: "XMR/USDC".to_string(),
+            side: side.to_string(),
+            quantity,
+            price,
+            leverage: effective_leverage,
+        })
+        .await
+    {
         Ok(conf) => {
-            let _ = crate::db::order::set_exchange_order_id(&state.db, db_id, &conf.exchange_order_id).await;
-            let _ = set_order_status(&state.db, &UpdateOrderStatus { id: db_id, status: "open" }).await;
-            let _ = state.sse_tx.send(SseEvent::OrderCreated { order_id: db_id });
+            let _ =
+                crate::db::order::set_exchange_order_id(&state.db, db_id, &conf.exchange_order_id)
+                    .await;
+            let _ = set_order_status(
+                &state.db,
+                &UpdateOrderStatus {
+                    id: db_id,
+                    status: "open",
+                },
+            )
+            .await;
+            let _ = state
+                .sse_tx
+                .send(SseEvent::OrderCreated { order_id: db_id });
             reply(&bot, &msg, &format!(
                 "✅ 已下单\nID: <code>{db_id}</code>\n交易所订单: <code>{}</code>\n{exchange} {side} {quantity} @ {price}  Δ{price_change}  ×{effective_leverage}",
                 conf.exchange_order_id
             )).await
         }
         Err(e) => {
-            let _ = set_order_status(&state.db, &UpdateOrderStatus { id: db_id, status: "failed" }).await;
+            let _ = set_order_status(
+                &state.db,
+                &UpdateOrderStatus {
+                    id: db_id,
+                    status: "failed",
+                },
+            )
+            .await;
             reply(&bot, &msg, &format!("❌ 交易所拒绝：{e:#}")).await
         }
     }
 }
 
 /// `/orders [status]`  — status 默认为 open
-async fn handle_orders(bot: Bot, msg: Message, args: String, state: Arc<AppState>) -> ResponseResult<()> {
+async fn handle_orders(
+    bot: Bot,
+    msg: Message,
+    args: String,
+    state: Arc<AppState>,
+) -> ResponseResult<()> {
     if sender_id(&msg) != state.config.allowed_telegram_user_id {
         return reply(&bot, &msg, "⛔ 未授权").await;
     }
@@ -154,7 +211,10 @@ async fn handle_orders(bot: Bot, msg: Message, args: String, state: Arc<AppState
         status: Some(status_filter),
         ..Default::default()
     };
-    let page = PageParams { before_id: None, limit: 20 };
+    let page = PageParams {
+        before_id: None,
+        limit: 20,
+    };
 
     let orders = match list_orders_page(&state.db, &filter, &page).await {
         Ok(v) => v,
@@ -165,25 +225,47 @@ async fn handle_orders(bot: Bot, msg: Message, args: String, state: Arc<AppState
         return reply(&bot, &msg, &format!("📭 无 {status_filter} 订单")).await;
     }
 
-    let lines: Vec<String> = orders.iter().map(|o| {
-        let auto_tag = if o.is_auto != 0 { " 🤖" } else { "" };
-        let filled = o.filled_price.map_or(String::new(), |p| format!(" → {p:.4}"));
-        format!(
-            "<code>{:>4}</code>  {} {}  {:.4} @ {:.4}  Δ{:.4}  ×{}{}{}",
-            o.id, o.exchange, o.side, o.quantity, o.price, o.price_change,
-            o.leverage, filled, auto_tag
-        )
-    }).collect();
+    let lines: Vec<String> = orders
+        .iter()
+        .map(|o| {
+            let auto_tag = if o.is_auto != 0 { " 🤖" } else { "" };
+            let filled = o
+                .filled_price
+                .map_or(String::new(), |p| format!(" → {p:.4}"));
+            format!(
+                "<code>{:>4}</code>  {} {}  {:.4} @ {:.4}  Δ{:.4}  ×{}{}{}",
+                o.id,
+                o.exchange,
+                o.side,
+                o.quantity,
+                o.price,
+                o.price_change,
+                o.leverage,
+                filled,
+                auto_tag
+            )
+        })
+        .collect();
 
-    reply(&bot, &msg, &format!(
-        "📋 <b>{status_filter} 订单</b>（最近 {}）\n\n{}",
-        orders.len(),
-        lines.join("\n")
-    )).await
+    reply(
+        &bot,
+        &msg,
+        &format!(
+            "📋 <b>{status_filter} 订单</b>（最近 {}）\n\n{}",
+            orders.len(),
+            lines.join("\n")
+        ),
+    )
+    .await
 }
 
 /// `/cancel <id>`
-async fn handle_cancel(bot: Bot, msg: Message, args: String, state: Arc<AppState>) -> ResponseResult<()> {
+async fn handle_cancel(
+    bot: Bot,
+    msg: Message,
+    args: String,
+    state: Arc<AppState>,
+) -> ResponseResult<()> {
     if sender_id(&msg) != state.config.allowed_telegram_user_id {
         return reply(&bot, &msg, "⛔ 未授权").await;
     }
@@ -195,17 +277,22 @@ async fn handle_cancel(bot: Bot, msg: Message, args: String, state: Arc<AppState
 
     let order = match get_order(&state.db, id).await {
         Ok(Some(o)) => o,
-        Ok(None)    => return reply(&bot, &msg, &format!("❌ 订单 {id} 不存在")).await,
-        Err(e)      => return reply(&bot, &msg, &format!("❌ 数据库错误：{e:#}")).await,
+        Ok(None) => return reply(&bot, &msg, &format!("❌ 订单 {id} 不存在")).await,
+        Err(e) => return reply(&bot, &msg, &format!("❌ 数据库错误：{e:#}")).await,
     };
 
     if order.status != "open" {
-        return reply(&bot, &msg, &format!("❌ 订单 {id} 状态为 '{}'，无法取消", order.status)).await;
+        return reply(
+            &bot,
+            &msg,
+            &format!("❌ 订单 {id} 状态为 '{}'，无法取消", order.status),
+        )
+        .await;
     }
 
     let exchange_oid = match order.exchange_order_id.as_deref() {
         Some(s) => s.to_string(),
-        None    => return reply(&bot, &msg, "❌ 订单尚无交易所 ID").await,
+        None => return reply(&bot, &msg, "❌ 订单尚无交易所 ID").await,
     };
 
     let adapter: Arc<dyn ExchangeAdapter> = if order.exchange == "hyperliquid" {
@@ -216,11 +303,65 @@ async fn handle_cancel(bot: Bot, msg: Message, args: String, state: Arc<AppState
 
     match adapter.cancel_order(&exchange_oid, &order.symbol).await {
         Ok(()) => {
-            let _ = set_order_status(&state.db, &UpdateOrderStatus { id, status: "cancelled" }).await;
-            let _ = state.sse_tx.send(SseEvent::OrderUpdated { order_id: id, status: "cancelled".into() });
+            let _ = set_order_status(
+                &state.db,
+                &UpdateOrderStatus {
+                    id,
+                    status: "cancelled",
+                },
+            )
+            .await;
+            let _ = state.sse_tx.send(SseEvent::OrderUpdated {
+                order_id: id,
+                status: "cancelled".into(),
+            });
             reply(&bot, &msg, &format!("✅ 订单 <code>{id}</code> 已取消")).await
         }
         Err(e) => reply(&bot, &msg, &format!("❌ 交易所取消失败：{e:#}")).await,
+    }
+}
+
+/// `/login <验证码>` — Web 界面登录验证
+async fn handle_login(
+    bot: Bot,
+    msg: Message,
+    args: String,
+    state: Arc<AppState>,
+) -> ResponseResult<()> {
+    let user_id = sender_id(&msg);
+    if user_id != state.config.allowed_telegram_user_id {
+        return reply(&bot, &msg, "⛔ 未授权用户").await;
+    }
+
+    let code = args.trim();
+    if code.is_empty() {
+        return reply(&bot, &msg, "用法：<code>/login &lt;验证码&gt;</code>").await;
+    }
+
+    let mut store = state.auth_store.write().await;
+
+    match store.get_mut(code) {
+        Some(session) => {
+            // 生成 JWT token
+            let token = match crate::auth::generate_token(user_id, &state.config.jwt_secret) {
+                Ok(t) => t,
+                Err(e) => {
+                    tracing::error!("generate token failed: {e:#}");
+                    return reply(&bot, &msg, "❌ 生成 token 失败").await;
+                }
+            };
+
+            session.user_id = Some(user_id);
+
+            // 通知前端 SSE 连接
+            if let Some(tx) = session.tx.take() {
+                let _ = tx.send(token);
+            }
+
+            tracing::info!(code, user_id, "login successful");
+            reply(&bot, &msg, "✅ 登录成功！现在可以在浏览器中使用 Web 界面。").await
+        }
+        None => reply(&bot, &msg, "❌ 验证码无效或已过期（有效期 5 分钟）").await,
     }
 }
 
@@ -233,8 +374,7 @@ pub async fn start(state: Arc<AppState>, shutdown_token: CancellationToken) -> a
     let handler = Update::filter_message()
         .filter_command::<Command>()
         .branch(
-            dptree::case![Command::Start]
-                .endpoint(|bot, msg, state| handle_start(bot, msg, state)),
+            dptree::case![Command::Start].endpoint(|bot, msg, state| handle_start(bot, msg, state)),
         )
         .branch(
             dptree::case![Command::Order(args)]
@@ -247,6 +387,10 @@ pub async fn start(state: Arc<AppState>, shutdown_token: CancellationToken) -> a
         .branch(
             dptree::case![Command::Cancel(args)]
                 .endpoint(|bot, msg, args, state| handle_cancel(bot, msg, args, state)),
+        )
+        .branch(
+            dptree::case![Command::Login(args)]
+                .endpoint(|bot, msg, args, state| handle_login(bot, msg, args, state)),
         );
 
     let mut dispatcher = Dispatcher::builder(bot, handler)
@@ -276,4 +420,3 @@ pub async fn send_notification(config: &crate::config::Config, text: &str) -> an
         .context("telegram send_notification")?;
     Ok(())
 }
-

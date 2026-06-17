@@ -9,6 +9,7 @@ XMR/USDC 无限链式反向网格交易机器人。支持 **Kraken 现货** 和 
 ## 功能特性
 
 - **Web 界面** — 下单表单、实时订单列表、状态推送（SSE）
+- **Telegram 认证** — 基于 Telegram Bot 的无密码登录，JWT token（8 小时有效期）
 - **Telegram Bot** — `/order` `/orders` `/cancel`，成交实时通知
 - **无限链式网格** — 成交 → 自动挂反向单 → 循环，直到取消
 - **单二进制部署** — 前端静态资源编译进 Rust 二进制，无需 Nginx
@@ -57,8 +58,31 @@ DATABASE_URL=sqlite:data/bot.db cargo run
 | `HYPERLIQUID_PRIVATE_KEY` | Hyperliquid API 钱包私钥（hex）| 必填 |
 | `HYPERLIQUID_ACCOUNT_ADDRESS` | 主账户地址（API agent wallet 时填写）| 空 |
 | `HYPERLIQUID_TESTNET` | 连接测试网 | `false` |
+| `JWT_SECRET` | JWT 签名密钥（请修改为随机字符串）| `change-me-in-production` |
 | `SERVER_ADDR` | HTTP 监听地址 | `0.0.0.0:3000` |
 | `DATABASE_URL` | SQLite 路径 | `sqlite:data/bot.db` |
+
+---
+
+## Web 界面认证
+
+首次访问 Web 界面时，系统会显示一个 **6 位验证码**。
+
+### 登录流程
+
+1. **打开浏览器** — 访问 `http://localhost:3000`
+2. **获取验证码** — 页面自动生成 6 位验证码（如 `123456`）
+3. **Telegram 验证** — 在 Telegram 中向 Bot 发送：
+   ```
+   /login 123456
+   ```
+4. **自动登录** — 验证成功后浏览器自动跳转到主页面
+
+### Token 有效期
+
+- JWT token 有效期为 **8 小时**
+- 过期后需重新验证
+- Token 直接编码过期时间，后端无需存储或定期清理
 
 ---
 
@@ -66,6 +90,7 @@ DATABASE_URL=sqlite:data/bot.db cargo run
 
 | 命令 | 说明 |
 |------|------|
+| `/login <code>` | Web 界面登录验证（6 位验证码）|
 | `/order <exchange> <side> <qty> <price> <price_change> [leverage]` | 下单 |
 | `/orders [open\|filled\|cancelled]` | 查看订单 |
 | `/cancel <id>` | 取消指定挂单 |
