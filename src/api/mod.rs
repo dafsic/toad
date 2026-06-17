@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{
-    http::Method,
+    http::{header, Method},
     middleware,
     routing::{delete, get, post},
     Router,
@@ -9,10 +9,10 @@ use axum::{
 use sqlx::SqlitePool;
 use tower_http::cors::{Any, CorsLayer};
 
+use crate::auth::AuthStore;
 use crate::config::Config;
 use crate::exchange::ExchangeAdapter;
 use crate::sse::SseSender;
-use crate::auth::AuthStore;
 
 pub mod handlers;
 
@@ -39,7 +39,7 @@ pub fn router(state: AppState) -> Router {
     // 认证路由（无需认证）
     let auth_routes = Router::new()
         .route("/request", post(crate::auth::handlers::request_login))
-        .route("/wait/:code", get(crate::auth::handlers::wait_login));
+        .route("/wait/{code}", get(crate::auth::handlers::wait_login));
 
     // API 路由（需要认证）
     let protected_api = Router::new()
@@ -55,9 +55,9 @@ pub fn router(state: AppState) -> Router {
     // 开发阶段允许前端 dev server（localhost:5173）跨域访问
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::DELETE])
-        .allow_headers(Any)
+        .allow_headers([header::CONTENT_TYPE, header::COOKIE, header::AUTHORIZATION])
         .allow_origin(Any)
-        .allow_credentials(true); // 允许 cookie
+        .allow_credentials(false);
 
     Router::new()
         .nest("/api/auth", auth_routes)

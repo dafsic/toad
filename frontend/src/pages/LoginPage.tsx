@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 
 export function LoginPage() {
     const [code, setCode] = useState<string>('')
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string>('')
+    const [copied, setCopied] = useState(false)
 
     useEffect(() => {
         // 1. 请求验证码
@@ -64,12 +65,21 @@ export function LoginPage() {
                     <>
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
                             <p className="text-gray-700 mb-4 text-sm">
-                                请在 Telegram 中给 Bot 发送以下命令：
+                                请在 Telegram 中给 Bot 发送以下完整命令：
                             </p>
-                            <div className="bg-white rounded border border-gray-300 p-4 font-mono text-center">
-                                <span className="text-gray-600 text-sm">/login </span>
-                                <span className="text-2xl font-bold text-blue-600">{code}</span>
-                            </div>
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(`/login ${code}`)
+                                    setCopied(true)
+                                    setTimeout(() => setCopied(false), 2000)
+                                }}
+                                className="w-full bg-white rounded border-2 border-blue-300 hover:border-blue-500 p-4 font-mono text-center cursor-pointer transition-colors"
+                            >
+                                <span className="text-lg font-bold text-gray-800">/login {code}</span>
+                                <span className="block text-xs text-gray-400 mt-1">
+                                    {copied ? '✅ 已复制！' : '点击复制'}
+                                </span>
+                            </button>
                         </div>
 
                         <div className="text-center">

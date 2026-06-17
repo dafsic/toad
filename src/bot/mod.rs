@@ -372,25 +372,43 @@ pub async fn start(state: Arc<AppState>, shutdown_token: CancellationToken) -> a
     let bot = Bot::new(&state.config.telegram_bot_token);
 
     let handler = Update::filter_message()
-        .filter_command::<Command>()
         .branch(
-            dptree::case![Command::Start].endpoint(|bot, msg, state| handle_start(bot, msg, state)),
+            // 命令处理分支
+            dptree::entry()
+                .filter_command::<Command>()
+                .branch(
+                    dptree::case![Command::Start]
+                        .endpoint(|bot, msg, state| handle_start(bot, msg, state)),
+                )
+                .branch(
+                    dptree::case![Command::Order(args)]
+                        .endpoint(|bot, msg, args, state| handle_order(bot, msg, args, state)),
+                )
+                .branch(
+                    dptree::case![Command::Orders(args)]
+                        .endpoint(|bot, msg, args, state| handle_orders(bot, msg, args, state)),
+                )
+                .branch(
+                    dptree::case![Command::Cancel(args)]
+                        .endpoint(|bot, msg, args, state| handle_cancel(bot, msg, args, state)),
+                )
+                .branch(
+                    dptree::case![Command::Login(args)]
+                        .endpoint(|bot, msg, args, state| handle_login(bot, msg, args, state)),
+                ),
         )
         .branch(
-            dptree::case![Command::Order(args)]
-                .endpoint(|bot, msg, args, state| handle_order(bot, msg, args, state)),
-        )
-        .branch(
-            dptree::case![Command::Orders(args)]
-                .endpoint(|bot, msg, args, state| handle_orders(bot, msg, args, state)),
-        )
-        .branch(
-            dptree::case![Command::Cancel(args)]
-                .endpoint(|bot, msg, args, state| handle_cancel(bot, msg, args, state)),
-        )
-        .branch(
-            dptree::case![Command::Login(args)]
-                .endpoint(|bot, msg, args, state| handle_login(bot, msg, args, state)),
+            // 纯数字验证码（用户直接发送 6 位数字，不带 /login 前缀）
+            Message::filter_text().endpoint(
+                |bot: Bot, msg: Message, text: String, state: Arc<AppState>| async move {
+                    let trimmed = text.trim();
+                    if trimmed.len() == 6 && trimmed.chars().all(|c| c.is_ascii_digit()) {
+                        handle_login(bot, msg, trimmed.to_string(), state).await
+                    } else {
+                        Ok(())
+                    }
+                },
+            ),
         );
 
     let mut dispatcher = Dispatcher::builder(bot, handler)

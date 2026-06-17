@@ -114,24 +114,29 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!(%addr, "http server listening");
     let listener = tokio::net::TcpListener::bind(addr).await.context("bind")?;
 
-    // 启动 HTTP 服务器
-    let server_handle = tokio::spawn(async move {
-        axum::serve(listener, router)
-            .with_graceful_shutdown(shutdown_signal())
-            .await
-    });
+    // 启动 HTTP 服务器（graceful shutdown 跟随全局 CancellationToken）
+    let server_handle = {
+        let token = shutdown_token.clone();
+        tokio::spawn(async move {
+            axum::serve(listener, router)
+                .with_graceful_shutdown(async move { token.cancelled().await })
+                .await
+        })
+    };
 
-    // 等待关闭信号
-    server_handle.await??;
+    // 监听系统信号，立即触发全局关闭（不等 HTTP 连接排空）
+    {
+        let token = shutdown_token.clone();
+        tokio::spawn(async move {
+            shutdown_signal().await;
+            token.cancel();
+        });
+    }
 
-    // 触发所有后台任务关闭
-    tracing::info!("triggering shutdown for all background tasks");
-    shutdown_token.cancel();
-
-    // 等待后台任务完成（最多等待 10 秒）
+    // 等待所有后台任务完成（最多 10 秒）
     let wait_timeout = tokio::time::Duration::from_secs(10);
     let _ = tokio::time::timeout(wait_timeout, async {
-        let _ = tokio::join!(engine_handle, bot_handle);
+        let _ = tokio::join!(engine_handle, bot_handle, server_handle);
     })
     .await;
 
