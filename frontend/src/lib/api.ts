@@ -45,3 +45,12 @@ export async function cancelOrder(id: number): Promise<void> {
     }
 }
 
+/** DELETE /api/orders/:id/hard — 硬删除终态订单（filled/cancelled/failed） */
+export async function deleteOrder(id: number): Promise<void> {
+    const res = await fetch(`${BASE}/orders/${id}/hard`, { method: 'DELETE' })
+    if (!res.ok) {
+        const text = await res.text()
+        throw new Error(`${res.status} ${text}`)
+    }
+}
+

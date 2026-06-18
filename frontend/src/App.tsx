@@ -91,6 +91,7 @@ export default function App() {
                         nextCursor={state.nextCursor}
                         onLoadMore={loadMore}
                         onCancelled={(id) => updateOrderStatus(id, 'cancelled')}
+                        onDeleted={onOrderCreated}
                     />
                 </div>
             </main>

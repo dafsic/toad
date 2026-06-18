@@ -46,6 +46,7 @@ pub fn router(state: AppState) -> Router {
         .route("/orders", post(handlers::create_order))
         .route("/orders", get(handlers::list_orders))
         .route("/orders/{id}", delete(handlers::cancel_order))
+        .route("/orders/{id}/hard", delete(handlers::delete_order))
         .route("/sse", get(crate::sse::sse_handler))
         .layer(middleware::from_fn_with_state(
             state.clone(),

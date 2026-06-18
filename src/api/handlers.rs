@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::api::AppState;
 use crate::db::order::{
     CreateOrder, OrderFilter, PageParams, UpdateOrderStatus,
-    get_order, insert_order, list_orders_page,
+    delete_order as delete_order_db, get_order, insert_order, list_orders_page,
     set_exchange_order_id, set_order_status,
 };
 use crate::exchange::OrderRequest;
@@ -260,6 +260,40 @@ pub async fn cancel_order(
         status: "cancelled".to_string(),
     });
 
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// `DELETE /api/orders/:id/hard` — 硬删除终态订单
+///
+/// 仅允许删除 `filled` / `cancelled` / `failed` 状态的订单。
+/// `open` / `partially_filled` / `pending` 订单不能删除（防止破坏活跃网格链）。
+pub async fn delete_order(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let order = get_order(&state.db, id)
+        .await
+        .map_err(internal)?
+        .ok_or((StatusCode::NOT_FOUND, format!("order {id} not found")))?;
+
+    // 仅允许终态订单删除
+    let allowed = matches!(order.status.as_str(), "filled" | "cancelled" | "failed");
+    if !allowed {
+        return Err(bad_request(&format!(
+            "order {id} is '{}', only filled/cancelled/failed orders can be deleted",
+            order.status
+        )));
+    }
+
+    let deleted = delete_order_db(&state.db, id)
+        .await
+        .map_err(internal)?;
+
+    if !deleted {
+        return Err((StatusCode::NOT_FOUND, format!("order {id} not found")));
+    }
+
+    tracing::info!(id, status = order.status, "order deleted from db");
     Ok(StatusCode::NO_CONTENT)
 }
 

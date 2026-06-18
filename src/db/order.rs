@@ -287,3 +287,15 @@ pub async fn set_exchange_order_id(
     .context("set_exchange_order_id")?;
     Ok(())
 }
+
+/// 从数据库中物理删除订单（仅允许终态订单：filled / cancelled / failed）。
+///
+/// **注意**：调用方需自行校验订单状态，此函数仅执行 DELETE。
+/// 返回受影响行数（0 表示订单不存在）。
+pub async fn delete_order(pool: &SqlitePool, id: i64) -> anyhow::Result<bool> {
+    let result = sqlx::query!("DELETE FROM orders WHERE id = ?", id)
+        .execute(pool)
+        .await
+        .context("delete_order")?;
+    Ok(result.rows_affected() > 0)
+}

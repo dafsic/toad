@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { cancelOrder } from '@/lib/api'
+import { cancelOrder, deleteOrder } from '@/lib/api'
 import type { Order, OrderStatus } from '@/types/order'
 import { cn } from '@/lib/utils'
 import ExchangeLogo from '@/components/ExchangeLogo'
@@ -11,6 +11,7 @@ interface Props {
     nextCursor: number | null
     onLoadMore: () => void
     onCancelled: (id: number) => void
+    onDeleted: (id: number) => void
 }
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
@@ -31,20 +32,34 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
     failed: '失败',
 }
 
-export default function OrderList({ items, loading, error, nextCursor, onLoadMore, onCancelled }: Props) {
+export default function OrderList({ items, loading, error, nextCursor, onLoadMore, onCancelled, onDeleted }: Props) {
     const [cancelling, setCancelling] = useState<Set<number>>(new Set())
-    const [cancelError, setCancelError] = useState<string | null>(null)
+    const [deleting, setDeleting] = useState<Set<number>>(new Set())
+    const [actionError, setActionError] = useState<string | null>(null)
 
     async function handleCancel(id: number) {
-        setCancelError(null)
+        setActionError(null)
         setCancelling(s => new Set(s).add(id))
         try {
             await cancelOrder(id)
             onCancelled(id)
         } catch (e) {
-            setCancelError(`取消 #${id} 失败: ${e}`)
+            setActionError(`取消 #${id} 失败: ${e}`)
         } finally {
             setCancelling(s => { const n = new Set(s); n.delete(id); return n })
+        }
+    }
+
+    async function handleDelete(id: number) {
+        setActionError(null)
+        setDeleting(s => new Set(s).add(id))
+        try {
+            await deleteOrder(id)
+            onDeleted(id)
+        } catch (e) {
+            setActionError(`删除 #${id} 失败: ${e}`)
+        } finally {
+            setDeleting(s => { const n = new Set(s); n.delete(id); return n })
         }
     }
 
@@ -59,8 +74,8 @@ export default function OrderList({ items, loading, error, nextCursor, onLoadMor
                 {loading && <span className="text-xs text-muted-foreground animate-pulse">加载中…</span>}
             </div>
 
-            {cancelError && (
-                <div className="px-4 py-2 text-xs text-red-400 border-b">{cancelError}</div>
+            {actionError && (
+                <div className="px-4 py-2 text-xs text-red-400 border-b">{actionError}</div>
             )}
 
             {items.length === 0 && !loading ? (
@@ -85,7 +100,9 @@ export default function OrderList({ items, loading, error, nextCursor, onLoadMor
                                 key={order.id}
                                 order={order}
                                 cancelling={cancelling.has(order.id)}
+                                deleting={deleting.has(order.id)}
                                 onCancel={() => handleCancel(order.id)}
+                                onDelete={() => handleDelete(order.id)}
                             />
                         ))}
                     </div>
@@ -107,12 +124,15 @@ export default function OrderList({ items, loading, error, nextCursor, onLoadMor
     )
 }
 
-function OrderRow({ order, cancelling, onCancel }: {
+function OrderRow({ order, cancelling, deleting, onCancel, onDelete }: {
     order: Order
     cancelling: boolean
+    deleting: boolean
     onCancel: () => void
+    onDelete: () => void
 }) {
     const sideColor = order.side === 'buy' ? 'text-green-400' : 'text-red-400'
+    const canDelete = order.status === 'filled' || order.status === 'cancelled' || order.status === 'failed'
 
     return (
         <div className={cn(
@@ -153,6 +173,15 @@ function OrderRow({ order, cancelling, onCancel }: {
                         className="rounded px-2 py-0.5 text-[10px] text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors disabled:opacity-40"
                     >
                         {cancelling ? '…' : '取消'}
+                    </button>
+                )}
+                {canDelete && (
+                    <button
+                        onClick={onDelete}
+                        disabled={deleting}
+                        className="rounded px-2 py-0.5 text-[10px] text-muted-foreground border border-border hover:text-red-400 hover:border-red-400/30 hover:bg-red-400/10 transition-colors disabled:opacity-40"
+                    >
+                        {deleting ? '…' : '删除'}
                     </button>
                 )}
             </div>

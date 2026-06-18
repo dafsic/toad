@@ -209,7 +209,6 @@ npm run build --prefix frontend && cargo build --release
 MIT
 
 // TODO:
-3. 所有挂单都是限价单，不用只做maker，可以是taker单，成交后立即挂反向单
 4. 增加删除订单功能
 5. CI自动push镜像
 6. 统计功能：统计每笔订单的盈亏，提供总盈亏统计
