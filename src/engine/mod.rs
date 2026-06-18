@@ -19,8 +19,8 @@ const FILL_CHANNEL_CAPACITY: usize = 256;
 /// 网格引擎：监听成交事件，触发链式反向限价单。
 ///
 /// 每笔完全成交后，按如下规则自动挂出反向限价单：
-/// - buy  成交 → sell，价格 = `filled_price + price_change`
-/// - sell 成交 → buy，  价格 = `filled_price - price_change`
+/// - buy  成交 → sell，价格 = `挂单价格 + price_change`
+/// - sell 成交 → buy，  价格 = `挂单价格 - price_change`
 ///
 /// 反向订单继承原订单的 `price_change` 和 `leverage`。
 pub struct GridEngine {
@@ -290,6 +290,67 @@ impl GridEngine {
             }
         };
 
+        // 幂等保护：订单已经处理过（filled/cancelled），不重复触发链式单
+        if order.status == "filled" || order.status == "cancelled" {
+            tracing::debug!(
+                id = order.id,
+                status = order.status,
+                exchange_order_id = event.exchange_order_id,
+                "duplicate fill event, skipping"
+            );
+            return Ok(());
+        }
+
+        // 仅在“完全成交”后才触发反向订单：
+        // 对可能的撮合/状态传播延迟做短暂重试，避免因瞬时状态仍为 open 而漏掉最终成交。
+        let adapter = self.adapter(&order.exchange);
+        let mut latest_status = String::new();
+        for attempt in 0..5 {
+            match adapter
+                .get_order_status(&event.exchange_order_id, &order.symbol)
+                .await
+            {
+                Ok(status) => {
+                    latest_status = status;
+                    if latest_status == "filled" {
+                        break;
+                    }
+                    if latest_status == "cancelled" {
+                        tracing::debug!(
+                            id = order.id,
+                            exchange_order_id = event.exchange_order_id,
+                            "fill event received but exchange reports cancelled, skipping"
+                        );
+                        return Ok(());
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        id = order.id,
+                        exchange = order.exchange,
+                        exchange_order_id = event.exchange_order_id,
+                        attempt,
+                        "confirm fill status failed: {e:#}"
+                    );
+                }
+            }
+
+            if attempt < 4 {
+                tokio::time::sleep(tokio::time::Duration::from_millis(250)).await;
+            }
+        }
+
+        if latest_status != "filled" {
+            tracing::debug!(
+                id = order.id,
+                exchange = order.exchange,
+                status = latest_status,
+                exchange_order_id = event.exchange_order_id,
+                "order not fully filled yet, skip reverse leg"
+            );
+            return Ok(());
+        }
+
         tracing::info!(
             id = order.id,
             exchange = order.exchange,
@@ -325,23 +386,24 @@ impl GridEngine {
             side = order.side,
             qty = event.quantity,
             price = event.filled_price,
-            reverse_side = if order.side == "buy" { "sell" } else { "buy" },
-            reverse_price = if order.side == "buy" {
-                event.filled_price + order.price_change
-            } else {
-                (event.filled_price - order.price_change).max(0.0)
-            },
+             reverse_side = if order.side == "buy" { "sell" } else { "buy" },
+             reverse_price = if order.side == "buy" {
+                 order.price + order.price_change
+             } else {
+                 (order.price - order.price_change).max(0.0)
+             },
         );
         if let Err(e) = crate::bot::send_notification(&self.config, &notify_filled).await {
             tracing::warn!("telegram notify (filled) failed: {e:#}");
         }
 
-        // 3. 计算反向订单参数
+        // 3. 计算反向订单参数（基于原订单挂单价格，而非实际成交价，
+        //    确保网格层级间距固定一致）
         let reverse_side = if order.side == "buy" { "sell" } else { "buy" };
         let reverse_price = if order.side == "buy" {
-            event.filled_price + order.price_change
+            order.price + order.price_change
         } else {
-            (event.filled_price - order.price_change).max(0.0)
+            (order.price - order.price_change).max(0.0)
         };
 
         if reverse_price <= 0.0 {

@@ -57,7 +57,10 @@ async fn handle_start(bot: Bot, msg: Message, state: Arc<AppState>) -> ResponseR
         return reply(&bot, &msg, "⛔ 未授权").await;
     }
 
-    let help = Command::descriptions().to_string();
+    let help = Command::descriptions()
+        .to_string()
+        .replace('<', "&lt;")
+        .replace('>', "&gt;");
     reply(&bot, &msg, &format!("🐸 <b>Toad Grid Bot</b>\n\n{help}")).await
 }
 
@@ -411,9 +414,14 @@ pub async fn start(state: Arc<AppState>, shutdown_token: CancellationToken) -> a
             ),
         );
 
-    let mut dispatcher = Dispatcher::builder(bot, handler)
+    let mut dispatcher = Dispatcher::builder(bot.clone(), handler)
         .dependencies(dptree::deps![state])
         .build();
+
+    // 向 Telegram 注册命令菜单（显示在输入框左侧的 / 菜单）
+    if let Err(e) = bot.set_my_commands(Command::bot_commands()).await {
+        tracing::warn!("failed to set bot commands: {e:#}");
+    }
 
     // 用 tokio::select! 监听关闭信号
     tokio::select! {

@@ -3,6 +3,7 @@ import { createOrder } from '@/lib/api'
 import type { Exchange, Side } from '@/types/order'
 import { cn } from '@/lib/utils'
 import ExchangeLogo from '@/components/ExchangeLogo'
+import { usePrice } from '@/hooks/usePrice'
 
 interface Props {
     exchange: Exchange
@@ -20,6 +21,7 @@ export default function ExchangePanel({ exchange, onCreated }: Props) {
     const [successId, setSuccessId] = useState<number | null>(null)
 
     const isHyperliquid = exchange === 'hyperliquid'
+    const { price: marketPrice, loading: priceLoading, error: priceError } = usePrice(exchange)
 
     async function handleSubmit(e: FormEvent) {
         e.preventDefault()
@@ -57,7 +59,16 @@ export default function ExchangePanel({ exchange, onCreated }: Props) {
                         {exchange === 'kraken' ? 'Kraken' : 'Hyperliquid'}
                     </span>
                 </div>
-                <span className="text-xs font-medium text-xmr">XMR/USDC</span>
+                <div className="flex items-center gap-2">
+                    {priceLoading ? (
+                        <span className="text-xs text-muted-foreground animate-pulse tracking-widest">···</span>
+                    ) : priceError ? (
+                        <span className="text-xs text-muted-foreground">—</span>
+                    ) : (
+                        <span className="text-sm font-bold font-mono text-xmr">${marketPrice}</span>
+                    )}
+                    <span className="text-xs text-muted-foreground">XMR/USDC</span>
+                </div>
             </div>
 
             <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">

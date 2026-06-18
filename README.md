@@ -107,8 +107,8 @@ DATABASE_URL=sqlite:data/bot.db cargo run
 ## 网格逻辑
 
 ```
-buy 成交  →  sell 挂单，价格 = filled_price + price_change
-sell 成交 →  buy  挂单，价格 = filled_price - price_change
+buy 成交  →  sell 挂单，价格 = 挂单价格 + price_change
+sell 成交 →  buy  挂单，价格 = 挂单价格 - price_change
 ```
 
 对手单继承相同的 `price_change` 和 `leverage`，形成持续振荡的双向网格。
@@ -192,3 +192,11 @@ npm run build --prefix frontend && cargo build --release
 ## License
 
 MIT
+
+// TODO:
+1. 增加部分成交状态，记录已成交数量，只有完全成交后才触发反向挂单
+2. 为了防止websocket断开重连过程中，需要30秒轮询最低挂卖单价和最高挂买单价，防止出现成交后无法挂反向单的情况
+3. 所有挂单都是限价单，不用只做maker，可以是taker单，成交后立即挂反向单
+4. 增加删除订单功能
+5. CI自动push镜像
+6. 统计功能：统计每笔订单的盈亏，提供总盈亏统计
