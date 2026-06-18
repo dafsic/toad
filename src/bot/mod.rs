@@ -235,8 +235,14 @@ async fn handle_orders(
             let filled = o
                 .filled_price
                 .map_or(String::new(), |p| format!(" → {p:.4}"));
+            // 部分成交时显示已成交数量
+            let partial = if o.status == "partially_filled" && o.filled_quantity > 0.0 {
+                format!(" ({:.4}/{:.4})", o.filled_quantity, o.quantity)
+            } else {
+                String::new()
+            };
             format!(
-                "<code>{:>4}</code>  {} {}  {:.4} @ {:.4}  Δ{:.4}  ×{}{}{}",
+                "<code>{:>4}</code>  {} {}  {:.4} @ {:.4}  Δ{:.4}  ×{}{}{}{}",
                 o.id,
                 o.exchange,
                 o.side,
@@ -245,6 +251,7 @@ async fn handle_orders(
                 o.price_change,
                 o.leverage,
                 filled,
+                partial,
                 auto_tag
             )
         })

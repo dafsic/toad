@@ -22,11 +22,13 @@ pub struct OrderConfirmation {
 }
 
 /// 成交回报。
+///
+/// `filled_quantity` 为**累计已成交数量**（非单次成交量）。
+/// 由各适配器从 WebSocket 事件中提取，用于更新 DB 中的部分成交进度。
 #[derive(Debug, Clone)]
 pub struct FillEvent {
     pub exchange_order_id: String,
-    pub filled_price: f64,
-    pub quantity: f64,
+    pub filled_quantity: f64,
 }
 
 /// 交易所适配器 Trait，Kraken 和 Hyperliquid 各自实现。
@@ -42,6 +44,8 @@ pub trait ExchangeAdapter: Send + Sync {
     async fn get_order_status(&self, exchange_order_id: &str, symbol: &str) -> anyhow::Result<String>;
 
     /// 订阅成交事件（WebSocket），通过 channel 推送 FillEvent。
+    /// FillEvent 携带**累计已成交数量**，引擎仅用于更新部分成交进度，
+    /// **不在此触发挂对手单**（由轮询负责）。
     /// 实现应在内部降级为 REST 轮询（当 WebSocket 不可用时）。
     async fn subscribe_fills(
         &self,

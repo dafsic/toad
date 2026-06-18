@@ -29,7 +29,7 @@ Co-Authored-By: Claude Sonnet 4.6 <claude-sonnet-4-6@anthropic.com>
 ## Key Conventions
 
 - **Do not modify** completed modules (`exchange/`, `engine/`, `api/`, `sse/`, `db/`) unless fixing a confirmed bug
-- Order status flow: `pending → open → filled | cancelled | failed`
+- Order status flow: `pending → open → partially_filled → filled | cancelled | failed`
 - Always **write `pending` to DB first**, then call exchange, then upgrade to `open` or `failed`
 - `leverage`: Kraken always 1; Hyperliquid ≥ 1, inherited by counter-orders
 - Hyperliquid: use `hypersdk = { git = "..." }` (not crates.io); call `update_leverage(is_cross=false)` before every order
@@ -45,12 +45,12 @@ Co-Authored-By: Claude Sonnet 4.6 <claude-sonnet-4-6@anthropic.com>
 - Main waits up to 10 seconds for all tasks to complete
 
 ### Startup Recovery (Downtime Order Sync)
-- `GridEngine::run()` calls `sync_order_status_on_startup()` for each `status='open'` order
-- Queries exchange via `ExchangeAdapter::get_order_status()`
-- **filled** → uses `order.price` as filled_price (not exact, but maintains chain integrity) → triggers `handle_fill()` → creates reverse order
+- `GridEngine::run()` starts a polling task (`tokio::time::interval`, 60s) whose first tick fires immediately
+- Each tick calls `poll_exchange("kraken")` + `poll_exchange("hyperliquid")`
+- `poll_exchange` queries active orders (`open` + `partially_filled`), picks the lowest sell + highest buy, checks exchange status
+- **filled** → uses `order.price` as filled_price → triggers `handle_filled_order()` → creates reverse order
 - **cancelled** → updates DB to `cancelled`, sends SSE + Telegram notification
-- **open** → continues listening
-- **Limitation**: Cannot retrieve exact fill price from exchange status API; uses order price instead. For exact fill prices, would need to extend trait with `get_fill_details()` method calling trade history APIs.
+- **open** → continues to next tick
 
 ## Environment Variables
 

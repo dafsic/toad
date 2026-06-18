@@ -170,10 +170,10 @@ struct WsExecutionMsg {
 struct WsExecutionData {
     order_id: String,
     /// 事件类型：`pending_new` / `new` / `trade` / `filled` / `canceled` / `expired`…
+    /// `trade` = 部分成交，`filled` = 完全成交
     exec_type: String,
-    /// 订单平均成交价（仅在 `trade` / `filled` 事件中存在且 > 0）
-    avg_price: Option<f64>,
-    /// 已累计成交数量
+    /// 已累计成交数量（Kraken WebSocket 提供 cumulative 值）
+    #[serde(default)]
     cum_qty: Option<f64>,
 }
 
@@ -359,29 +359,30 @@ impl ExchangeAdapter for KrakenAdapter {
                 }
 
                 for item in exec_msg.data {
-                    // 仅在完全成交时触发网格引擎
-                    if item.exec_type != "filled" {
+                    // 处理部分成交（trade）和完全成交（filled）事件。
+                    // 两者都携带 cum_qty（累计已成交数量），用于更新 DB 中的成交进度。
+                    // 引擎仅更新 filled_quantity，不在此挂对手单（由轮询负责）。
+                    if item.exec_type != "trade" && item.exec_type != "filled" {
                         continue;
                     }
-                    let (Some(avg_price), Some(cum_qty)) = (item.avg_price, item.cum_qty) else {
-                        tracing::warn!(order_id = item.order_id, "kraken: filled event missing avg_price/cum_qty");
+                    let Some(cum_qty) = item.cum_qty else {
+                        tracing::warn!(order_id = item.order_id, "kraken: fill event missing cum_qty");
                         continue;
                     };
-                    if avg_price <= 0.0 {
+                    if cum_qty <= 0.0 {
                         continue;
                     }
 
                     tracing::info!(
                         order_id = item.order_id,
-                        avg_price,
                         cum_qty,
-                        "kraken fill"
+                        exec_type = item.exec_type,
+                        "kraken fill progress"
                     );
 
                     let event = FillEvent {
                         exchange_order_id: item.order_id,
-                        filled_price: avg_price,
-                        quantity: cum_qty,
+                        filled_quantity: cum_qty,
                     };
                     if tx.send(event).await.is_err() {
                         // 接收端（GridEngine）已关闭，干净退出

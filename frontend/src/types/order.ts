@@ -1,6 +1,6 @@
 export type Exchange = 'kraken' | 'hyperliquid'
 export type Side = 'buy' | 'sell'
-export type OrderStatus = 'pending' | 'open' | 'filled' | 'cancelled' | 'failed'
+export type OrderStatus = 'pending' | 'open' | 'partially_filled' | 'filled' | 'cancelled' | 'failed'
 
 export interface Order {
     id: number
@@ -17,6 +17,8 @@ export interface Order {
     exchange_order_id: string | null
     status: OrderStatus
     filled_price: number | null
+    /** 累计已成交数量（由 WebSocket 实时更新） */
+    filled_quantity: number
     created_at: string
     updated_at: string
 }

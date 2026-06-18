@@ -10,6 +10,7 @@ interface Props {
 const STATUSES: { value: OrderStatus | ''; label: string }[] = [
     { value: '', label: '全部' },
     { value: 'open', label: '挂单' },
+    { value: 'partially_filled', label: '部分成交' },
     { value: 'filled', label: '成交' },
     { value: 'cancelled', label: '取消' },
     { value: 'failed', label: '失败' },

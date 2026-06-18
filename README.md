@@ -113,36 +113,51 @@ sell 成交 →  buy  挂单，价格 = 挂单价格 - price_change
 
 对手单继承相同的 `price_change` 和 `leverage`，形成持续振荡的双向网格。
 
+### 订单状态流
+
+```
+pending → open → partially_filled → filled | cancelled | failed
+```
+
+- `pending`：已写入 DB，尚未提交到交易所
+- `open`：交易所已接受挂单
+- `partially_filled`：WebSocket 报告部分成交，`filled_quantity` 实时更新
+- `filled`：轮询确认完全成交，已自动挂出反向对手单
+- `cancelled` / `failed`：终态
+
+### WebSocket 与轮询的分工
+
+- **WebSocket**（成交事件）：仅更新 `filled_quantity` 和状态 → `partially_filled`，**不挂对手单**
+- **轮询**（每 60 秒/交易所）：查询最低挂卖单和最高挂买单是否完全成交 → 完全成交则挂对手单
+
+即使 WebSocket 完全不工作，轮询也能保证网格正常运行。
+
 ---
 
 ## 停机恢复机制
 
-程序重启时会**主动检查**所有 `status='open'` 订单在停机期间的状态变化：
+程序重启时，轮询任务的首次 tick 立即执行，**主动检查**所有活跃订单（`open` + `partially_filled`）在停机期间的状态变化：
 
 ### 恢复流程
 
-1. **加载未完成订单** — 从数据库查询所有 `status='open'` 的订单
-2. **查询交易所状态** — 逐个调用交易所 API 查询最新状态
-3. **状态同步**：
+1. **加载活跃订单** — 从数据库查询所有 `status='open'` 或 `'partially_filled'` 的订单
+2. **筛选候选订单** — 每个交易所筛出最低价卖单和最高价买单
+3. **查询交易所状态** — 调用交易所 API 查询这两个候选订单的最新状态
+4. **状态同步**：
    - **已成交** → 使用挂单价格触发链式反向下单（保持网格完整性）
    - **已取消** → 更新数据库并发送 Telegram 通知
-   - **仍挂单** → 继续监听成交事件
+   - **仍挂单** → 等待下一次轮询
 
 ### 重要说明
 
 ⚠️ **成交价格限制**
 
-由于交易所 API 限制，停机期间成交的订单无法获取精确成交价格，系统会使用**挂单价格**作为成交价来计算反向订单价格。这可能导致轻微的价格偏差，但可以保证网格链式的完整性。
-
-如需精确成交价格，建议：
-- 保持程序 24/7 运行，由 WebSocket 实时接收成交事件
-- 或者在停机期间避免订单成交（如设置较窄的价格区间）
+由于交易所状态 API 限制，轮询检测到完全成交时无法获取精确成交价格，系统会使用**挂单价格**作为成交价。反向订单价格基于挂单价格 ± `price_change` 计算，保证网格层级间距固定一致，不受实际成交价波动影响。
 
 ### 日志示例
 
 ```
-2026-06-17T12:00:00Z INFO toad: restoring open orders from db count=3
-2026-06-17T12:00:01Z WARN toad::engine: order filled during downtime, triggering chain recovery with order price id=42
+2026-06-17T12:00:00Z INFO toad::engine: poll: order fully filled, triggering reverse grid leg id=42
 2026-06-17T12:00:01Z INFO toad::engine: reverse grid leg placed new_id=43
 ```
 
@@ -194,8 +209,6 @@ npm run build --prefix frontend && cargo build --release
 MIT
 
 // TODO:
-1. 增加部分成交状态，记录已成交数量，只有完全成交后才触发反向挂单
-2. 为了防止websocket断开重连过程中，需要30秒轮询最低挂卖单价和最高挂买单价，防止出现成交后无法挂反向单的情况
 3. 所有挂单都是限价单，不用只做maker，可以是taker单，成交后立即挂反向单
 4. 增加删除订单功能
 5. CI自动push镜像

@@ -16,6 +16,7 @@ interface Props {
 const STATUS_COLORS: Record<OrderStatus, string> = {
     pending: 'text-yellow-400',
     open: 'text-blue-400',
+    partially_filled: 'text-cyan-400',
     filled: 'text-green-400',
     cancelled: 'text-muted-foreground',
     failed: 'text-red-400',
@@ -24,6 +25,7 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 const STATUS_LABELS: Record<OrderStatus, string> = {
     pending: '等待',
     open: '挂单',
+    partially_filled: '部分成交',
     filled: '成交',
     cancelled: '取消',
     failed: '失败',

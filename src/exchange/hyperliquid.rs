@@ -5,7 +5,7 @@ use hypersdk::Address;
 use hypersdk::hypercore::{
     self, NonceHandler, PrivateKeySigner,
     types::{
-        BatchCancel, BatchOrder, Cancel, Fill, Incoming, OrderGrouping, OrderResponseStatus,
+        BatchCancel, BatchOrder, Cancel, Incoming, OrderGrouping, OrderResponseStatus,
         OrderTypePlacement, Side as HlSide, Subscription, TimeInForce,
         OrderRequest as HlOrderRequest,
     },
@@ -14,7 +14,7 @@ use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Mutex};
 
 use crate::exchange::{ExchangeAdapter, FillEvent, OrderConfirmation, OrderRequest};
 
@@ -30,6 +30,10 @@ pub struct HyperliquidAdapter {
     /// 市场名称 -> PerpMarket 映射（含 asset index 和 tick 规则）
     markets: HashMap<String, hypersdk::hypercore::PerpMarket>,
     nonce: Arc<NonceHandler>,
+    /// oid -> 累计已成交数量。
+    /// Hyperliquid WebSocket Fill.sz 是单次成交量（非累计），
+    /// 需在本地累加以提供累计值给引擎。
+    filled_tracker: Arc<Mutex<HashMap<u64, f64>>>,
 }
 
 impl HyperliquidAdapter {
@@ -85,6 +89,7 @@ impl HyperliquidAdapter {
             user_address,
             markets,
             nonce: Arc::new(NonceHandler::default()),
+            filled_tracker: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 
@@ -268,12 +273,15 @@ impl ExchangeAdapter for HyperliquidAdapter {
     /// 订阅成交事件（WebSocket `userFills` 频道）。
     ///
     /// 使用 hypersdk `WebSocket` 实现，自动重连并重新订阅。
-    /// 降级策略：若 WebSocket 报错超过阈值，任务退出并由 GridEngine 重启。
+    /// Hyperliquid `Fill.sz` 是单次成交量（非累计），适配器在本地
+    /// 按 `oid` 累加得到累计已成交数量后发送给引擎。
+    /// 引擎仅更新 filled_quantity，不在此挂对手单（由轮询负责）。
     async fn subscribe_fills(
         &self,
         tx: mpsc::Sender<FillEvent>,
     ) -> anyhow::Result<()> {
         let user = self.user_address;
+        let tracker = Arc::clone(&self.filled_tracker);
         let mut ws = self.client.websocket();
         ws.subscribe(Subscription::UserFills { user });
 
@@ -293,15 +301,34 @@ impl ExchangeAdapter for HyperliquidAdapter {
                     ..
                 }) => {
                     if is_snapshot {
-                        // 快照消息是历史成交，不触发新网格
+                        // 快照消息是历史成交，不用于更新进度
                         continue;
                     }
                     for fill in fills {
-                        if let Some(fe) = fill_to_event(&fill) {
-                            if tx.send(fe).await.is_err() {
-                                // 接收端已关闭，退出
-                                return Ok(());
-                            }
+                        let Some(sz) = fill.sz.to_f64() else { continue };
+
+                        // 累加单次成交量到该 oid 的累计记录
+                        let cumulative = {
+                            let mut map = tracker.lock().await;
+                            let entry = map.entry(fill.oid).or_insert(0.0);
+                            *entry += sz;
+                            *entry
+                        };
+
+                        tracing::info!(
+                            oid = fill.oid,
+                            fill_sz = sz,
+                            cumulative,
+                            "hyperliquid fill progress"
+                        );
+
+                        let event = FillEvent {
+                            exchange_order_id: fill.oid.to_string(),
+                            filled_quantity: cumulative,
+                        };
+                        if tx.send(event).await.is_err() {
+                            // 接收端已关闭，退出
+                            return Ok(());
                         }
                     }
                 }
@@ -310,17 +337,5 @@ impl ExchangeAdapter for HyperliquidAdapter {
         }
         Ok(())
     }
-}
-
-/// 将 hypersdk `Fill` 转为内部 `FillEvent`。
-/// `filled_price` 取 fill.px（单次成交价）。
-fn fill_to_event(fill: &Fill) -> Option<FillEvent> {
-    let filled_price = fill.px.to_f64()?;
-    let quantity = fill.sz.to_f64()?;
-    Some(FillEvent {
-        exchange_order_id: fill.oid.to_string(),
-        filled_price,
-        quantity,
-    })
 }
 

@@ -17,6 +17,8 @@ pub struct Order {
     pub is_auto: i64,               // SQLite 用 INTEGER 存 bool
     pub parent_order_id: Option<i64>,
     pub exchange_order_id: Option<String>,
+    /// 累计已成交数量（由 WebSocket 成交事件实时更新）
+    pub filled_quantity: f64,
     pub status: String,
     pub filled_price: Option<f64>,
     pub created_at: String,
@@ -45,6 +47,8 @@ pub struct CreateOrder<'a> {
 pub struct UpdateOrderFilled {
     pub id: i64,
     pub filled_price: f64,
+    /// 完全成交时的已成交数量（通常等于订单总量）
+    pub filled_quantity: f64,
 }
 
 /// 通用状态更新（取消、失败等）。
@@ -121,13 +125,13 @@ pub async fn get_order(pool: &SqlitePool, id: i64) -> anyhow::Result<Option<Orde
 }
 
 /// 按 `exchange_order_id` 查询订单（成交事件匹配用）。
-/// 返回状态为 `open` 的第一条匹配，通常唯一。
+/// 返回状态为 `open` 或 `partially_filled` 的第一条匹配，通常唯一。
 pub async fn get_order_by_exchange_id(
     pool: &SqlitePool,
     exchange_order_id: &str,
 ) -> anyhow::Result<Option<Order>> {
     let row = sqlx::query_as::<_, Order>(
-        "SELECT * FROM orders WHERE exchange_order_id = ? AND status = 'open' LIMIT 1",
+        "SELECT * FROM orders WHERE exchange_order_id = ? AND status IN ('open', 'partially_filled') LIMIT 1",
     )
     .bind(exchange_order_id)
     .fetch_optional(pool)
@@ -136,12 +140,30 @@ pub async fn get_order_by_exchange_id(
     Ok(row)
 }
 
-/// 查询所有 status = 'open' 的订单（引擎重启恢复用）。
-pub async fn list_open_orders(pool: &SqlitePool) -> anyhow::Result<Vec<Order>> {
-    let rows = sqlx::query_as::<_, Order>("SELECT * FROM orders WHERE status = 'open'")
-        .fetch_all(pool)
-        .await
-        .context("list_open_orders")?;
+/// 查询所有活跃订单（status 为 open 或 partially_filled），引擎重启恢复和轮询用。
+#[allow(dead_code)]
+pub async fn list_active_orders(pool: &SqlitePool) -> anyhow::Result<Vec<Order>> {
+    let rows = sqlx::query_as::<_, Order>(
+        "SELECT * FROM orders WHERE status IN ('open', 'partially_filled')",
+    )
+    .fetch_all(pool)
+    .await
+    .context("list_active_orders")?;
+    Ok(rows)
+}
+
+/// 查询指定交易所的所有活跃订单（轮询用）。
+pub async fn list_active_orders_by_exchange(
+    pool: &SqlitePool,
+    exchange: &str,
+) -> anyhow::Result<Vec<Order>> {
+    let rows = sqlx::query_as::<_, Order>(
+        "SELECT * FROM orders WHERE exchange = ? AND status IN ('open', 'partially_filled')",
+    )
+    .bind(exchange)
+    .fetch_all(pool)
+    .await
+    .context("list_active_orders_by_exchange")?;
     Ok(rows)
 }
 
@@ -185,21 +207,55 @@ pub async fn list_orders_page(
     Ok(rows)
 }
 
-/// 将订单标记为已成交（filled），更新 filled_price 与 updated_at。
-pub async fn mark_order_filled(pool: &SqlitePool, p: &UpdateOrderFilled) -> anyhow::Result<()> {
-    sqlx::query!(
+/// 将订单标记为完全成交（filled），更新 filled_price、filled_quantity 与 updated_at。
+///
+/// **竞态保护**：仅当当前状态为 `open` 或 `partially_filled` 时才更新，
+/// 防止 WebSocket 与轮询并发时重复触发。返回受影响行数（0 表示已被其他流程处理）。
+pub async fn mark_order_filled(pool: &SqlitePool, p: &UpdateOrderFilled) -> anyhow::Result<bool> {
+    let result = sqlx::query!(
         r#"
         UPDATE orders
-        SET status = 'filled', filled_price = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        SET status = 'filled',
+            filled_price = ?,
+            filled_quantity = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND status IN ('open', 'partially_filled')
         "#,
         p.filled_price,
+        p.filled_quantity,
         p.id,
     )
     .execute(pool)
     .await
     .context("mark_order_filled")?;
-    Ok(())
+    Ok(result.rows_affected() > 0)
+}
+
+/// 更新订单的部分成交进度（由 WebSocket 成交事件触发）。
+///
+/// 将状态从 `open` 升级为 `partially_filled`，并更新 `filled_quantity`。
+/// **竞态保护**：仅当当前状态为 `open` 或 `partially_filled` 时才更新，
+/// 已 `filled`/`cancelled` 的订单不会被覆盖。返回受影响行数。
+pub async fn update_fill_progress(
+    pool: &SqlitePool,
+    id: i64,
+    filled_quantity: f64,
+) -> anyhow::Result<bool> {
+    let result = sqlx::query!(
+        r#"
+        UPDATE orders
+        SET status = 'partially_filled',
+            filled_quantity = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND status IN ('open', 'partially_filled')
+        "#,
+        filled_quantity,
+        id,
+    )
+    .execute(pool)
+    .await
+    .context("update_fill_progress")?;
+    Ok(result.rows_affected() > 0)
 }
 
 /// 更新订单状态（取消、失败等通用变更）。

@@ -65,6 +65,8 @@ pub struct OrderResponse {
     pub exchange_order_id: Option<String>,
     pub status: String,
     pub filled_price: Option<f64>,
+    /// 累计已成交数量（由 WebSocket 实时更新）
+    pub filled_quantity: f64,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -278,6 +280,7 @@ fn order_to_response(o: crate::db::order::Order) -> OrderResponse {
         exchange_order_id: o.exchange_order_id,
         status:            o.status,
         filled_price:      o.filled_price,
+        filled_quantity:   o.filled_quantity,
         created_at:        o.created_at,
         updated_at:        o.updated_at,
     }
