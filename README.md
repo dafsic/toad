@@ -8,10 +8,12 @@ XMR/USDC 无限链式反向网格交易机器人。支持 **Kraken 现货** 和 
 
 ## 功能特性
 
-- **Web 界面** — 下单表单、实时订单列表、状态推送（SSE）
+- **Web 界面** — 下单表单、实时订单列表、状态推送（SSE）、订单删除
 - **Telegram 认证** — 基于 Telegram Bot 的无密码登录，JWT token（8 小时有效期）
-- **Telegram Bot** — `/order` `/orders` `/cancel`，成交实时通知
+- **Telegram Bot** — `/order` `/orders` `/cancel` `/login`，成交实时通知
 - **无限链式网格** — 成交 → 自动挂反向单 → 循环，直到取消
+- **部分成交跟踪** — WebSocket 实时更新已成交数量
+- **轮询驱动** — 每 60 秒轮询确认完全成交并挂对手单，WebSocket 断线不影响网格运行
 - **单二进制部署** — 前端静态资源编译进 Rust 二进制，无需 Nginx
 - **Docker 一键启动**
 
@@ -92,7 +94,7 @@ DATABASE_URL=sqlite:data/bot.db cargo run
 |------|------|
 | `/login <code>` | Web 界面登录验证（6 位验证码）|
 | `/order <exchange> <side> <qty> <price> <price_change> [leverage]` | 下单 |
-| `/orders [open\|filled\|cancelled]` | 查看订单 |
+| `/orders [status]` | 查看订单（status 可选：open/partially_filled/filled/cancelled/failed，默认 open）|
 | `/cancel <id>` | 取消指定挂单 |
 
 **示例：**
@@ -134,11 +136,11 @@ pending → open → partially_filled → filled | cancelled | failed
 
 ---
 
-## 停机恢复机制
+## 轮询与停机恢复
 
-程序重启时，轮询任务的首次 tick 立即执行，**主动检查**所有活跃订单（`open` + `partially_filled`）在停机期间的状态变化：
+轮询任务持续运行（每 60 秒/交易所），不仅用于停机恢复，也是日常挂对手单的驱动机制。程序重启时，轮询任务的首次 tick 立即执行，**主动检查**所有活跃订单（`open` + `partially_filled`）在停机期间的状态变化：
 
-### 恢复流程
+### 轮询流程
 
 1. **加载活跃订单** — 从数据库查询所有 `status='open'` 或 `'partially_filled'` 的订单
 2. **筛选候选订单** — 每个交易所筛出最低价卖单和最高价买单
@@ -188,9 +190,10 @@ npm run build --prefix frontend && cargo build --release
 | 后端 | Rust · Tokio · Axum 0.8 |
 | 数据库 | SQLite · sqlx 0.8 |
 | Telegram | teloxide 0.13 |
-| 前端 | React 19 · Vite · Tailwind CSS |
+| 前端 | React 19 · Vite · Tailwind CSS · Radix UI |
 | 静态嵌入 | rust-embed（单二进制） |
 | 实时推送 | Server-Sent Events |
+| 认证 | JWT (HS256, jsonwebtoken) |
 | Hyperliquid | [hypersdk](https://github.com/infinitefield/hypersdk)（git 主分支） |
 
 ---
@@ -209,6 +212,6 @@ npm run build --prefix frontend && cargo build --release
 MIT
 
 // TODO:
-4. 增加删除订单功能
-5. CI自动push镜像
-6. 统计功能：统计每笔订单的盈亏，提供总盈亏统计
+1. CI自动push镜像
+2. 前端页面的中文全部改成英文，保持一致
+3. 提供不带网格机器人功能的，只是辅助用户在多个平台下单的功能，用户就不需要切换多个平台的界面了，直接在这个界面下单就好了，后端帮用户把单子下到不同的平台上去。

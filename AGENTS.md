@@ -18,20 +18,32 @@ AI commits MUST include:
 Co-Authored-By: Claude Sonnet 4.6 <claude-sonnet-4-6@anthropic.com>
 ```
 
-## Pending Modules (priority order)
+## Module Status
 
-1. `src/config.rs` — implement `Config::parse()` via clap derive + env
-2. `src/main.rs` — wire: `init_pool → adapters → GridEngine → bot → Axum serve`
-3. `src/bot/mod.rs` — teloxide; commands `/order` `/orders` `/cancel <id>`; check `allowed_telegram_user_id` in every handler
-4. `frontend/` — React 19 + Vite + shadcn/ui; see `skills/backend-api/SKILL.md` for API contract
-5. `src/assets.rs` — rust-embed fallback (SPA → index.html)
+All modules implemented. Core layers (do not modify unless fixing a confirmed bug):
+
+| Module | Description |
+|--------|-------------|
+| `src/config.rs` | clap derive + `.env` + env var parsing |
+| `src/main.rs` | Startup orchestration: `init_pool → adapters → GridEngine → bot → Axum serve` |
+| `src/bot/mod.rs` | teloxide 0.13; commands `/order` `/orders` `/cancel` `/login`; checks `allowed_telegram_user_id` in every handler |
+| `src/frontend/` | React 19 + Vite + Tailwind CSS + Radix UI (shadcn/ui style) |
+| `src/assets.rs` | rust-embed fallback (SPA → index.html) |
+| `src/exchange/` | `ExchangeAdapter` trait + Kraken/Hyperliquid adapters |
+| `src/engine/` | GridEngine: WebSocket fill updates + polling-driven reverse orders |
+| `src/api/` | Axum 0.8 REST handlers + router |
+| `src/sse/` | Server-Sent Events broadcast |
+| `src/db/` | SQLite + sqlx, `sqlx::migrate!` auto-migration |
+| `src/auth/` | JWT auth (HS256, 8h) + Telegram verification flow |
 
 ## Key Conventions
 
-- **Do not modify** completed modules (`exchange/`, `engine/`, `api/`, `sse/`, `db/`) unless fixing a confirmed bug
 - Order status flow: `pending → open → partially_filled → filled | cancelled | failed`
 - Always **write `pending` to DB first**, then call exchange, then upgrade to `open` or `failed`
 - `leverage`: Kraken always 1; Hyperliquid ≥ 1, inherited by counter-orders
+- **Reverse order pricing**: based on `order.price ± price_change` (not filled_price), ensuring fixed grid spacing
+- **WebSocket vs Polling**: WebSocket only updates `filled_quantity` → `partially_filled`; polling (60s) detects full fills and places reverse orders. Grid works even if WebSocket is down.
+- **Race condition protection**: `update_fill_progress()` and `mark_order_filled()` use `WHERE status IN ('open','partially_filled')` conditional updates
 - Hyperliquid: use `hypersdk = { git = "..." }` (not crates.io); call `update_leverage(is_cross=false)` before every order
 - `sqlx::query!` macros require `DATABASE_URL` env var at compile time — set it or use a `.env` file
 - Frontend dev proxy: `vite.config.ts` already routes `/api` → `http://localhost:3000`
@@ -44,7 +56,7 @@ Co-Authored-By: Claude Sonnet 4.6 <claude-sonnet-4-6@anthropic.com>
 - All background tasks (GridEngine, exchange listeners, Telegram Bot) monitor the token
 - Main waits up to 10 seconds for all tasks to complete
 
-### Startup Recovery (Downtime Order Sync)
+### Polling & Recovery
 - `GridEngine::run()` starts a polling task (`tokio::time::interval`, 60s) whose first tick fires immediately
 - Each tick calls `poll_exchange("kraken")` + `poll_exchange("hyperliquid")`
 - `poll_exchange` queries active orders (`open` + `partially_filled`), picks the lowest sell + highest buy, checks exchange status
@@ -91,6 +103,11 @@ DATABASE_URL (default: sqlite:data/bot.db), SERVER_ADDR (default: 0.0.0.0:3000)
 
 ### Routes
 - **Public**: `/api/auth/request`, `/api/auth/wait/:code`
-- **Protected** (requires auth middleware): `/api/orders`, `/api/sse`
+- **Protected** (requires auth middleware):
+  - `POST /api/orders` — create order
+  - `GET /api/orders` — list orders (cursor pagination + filters)
+  - `DELETE /api/orders/:id` — cancel open order (calls exchange API)
+  - `DELETE /api/orders/:id/hard` — hard-delete terminal orders (filled/cancelled/failed only)
+  - `GET /api/sse` — SSE event stream
 
 
