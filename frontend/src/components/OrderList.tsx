@@ -24,12 +24,12 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 }
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-    pending: '等待',
-    open: '挂单',
-    partially_filled: '部分成交',
-    filled: '成交',
-    cancelled: '取消',
-    failed: '失败',
+    pending: 'Pending',
+    open: 'Open',
+    partially_filled: 'Partial',
+    filled: 'Filled',
+    cancelled: 'Cancelled',
+    failed: 'Failed',
 }
 
 export default function OrderList({ items, loading, error, nextCursor, onLoadMore, onCancelled, onDeleted }: Props) {
@@ -44,7 +44,7 @@ export default function OrderList({ items, loading, error, nextCursor, onLoadMor
             await cancelOrder(id)
             onCancelled(id)
         } catch (e) {
-            setActionError(`取消 #${id} 失败: ${e}`)
+            setActionError(`Cancel #${id} failed: ${e}`)
         } finally {
             setCancelling(s => { const n = new Set(s); n.delete(id); return n })
         }
@@ -57,7 +57,7 @@ export default function OrderList({ items, loading, error, nextCursor, onLoadMor
             await deleteOrder(id)
             onDeleted(id)
         } catch (e) {
-            setActionError(`删除 #${id} 失败: ${e}`)
+            setActionError(`Delete #${id} failed: ${e}`)
         } finally {
             setDeleting(s => { const n = new Set(s); n.delete(id); return n })
         }
@@ -71,7 +71,7 @@ export default function OrderList({ items, loading, error, nextCursor, onLoadMor
         <div className="border border-border bg-card rounded-xl shadow-sm flex flex-col">
             <div className="px-4 py-3 border-b border-border bg-secondary flex items-center justify-between">
                 <span className="font-bold text-sm tracking-wide">Orders</span>
-                {loading && <span className="text-xs text-muted-foreground animate-pulse">加载中…</span>}
+                {loading && <span className="text-xs text-muted-foreground animate-pulse">Loading…</span>}
             </div>
 
             {actionError && (
@@ -85,12 +85,12 @@ export default function OrderList({ items, loading, error, nextCursor, onLoadMor
                     {/* Header */}
                     <div className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_1fr_56px] gap-2 px-4 py-2 border-b border-border bg-secondary text-xs text-muted-foreground tracking-widest uppercase">
                         <span>ID</span>
-                        <span>交易所</span>
-                        <span>方向</span>
-                        <span className="text-right">数量</span>
-                        <span className="text-right">价格</span>
-                        <span className="text-right">价差/×</span>
-                        <span>状态</span>
+                        <span>Exchange</span>
+                        <span>Side</span>
+                        <span className="text-right">Quantity</span>
+                        <span className="text-right">Price</span>
+                        <span className="text-right">Δ/×</span>
+                        <span>Status</span>
                         <span></span>
                     </div>
 
@@ -114,7 +114,7 @@ export default function OrderList({ items, loading, error, nextCursor, onLoadMor
                                 disabled={loading}
                                 className="w-full rounded-md border py-1.5 text-xs text-muted-foreground hover:bg-secondary transition-colors disabled:opacity-50"
                             >
-                                {loading ? '加载中…' : '加载更多'}
+                                {loading ? 'Loading…' : 'Load more'}
                             </button>
                         </div>
                     )}
@@ -149,7 +149,7 @@ function OrderRow({ order, cancelling, deleting, onCancel, onDelete }: {
                 <span className="capitalize text-xs">{order.exchange === 'kraken' ? 'Kraken' : 'HL'}</span>
             </span>
             <span className={cn('font-medium', sideColor)}>
-                {order.side === 'buy' ? '买' : '卖'}
+                {order.side === 'buy' ? 'Buy' : 'Sell'}
             </span>
             <span className="text-right font-mono">{order.quantity.toFixed(4)}</span>
             <span className="text-right font-mono">
@@ -172,7 +172,7 @@ function OrderRow({ order, cancelling, deleting, onCancel, onDelete }: {
                         disabled={cancelling}
                         className="rounded px-2 py-0.5 text-[10px] text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors disabled:opacity-40"
                     >
-                        {cancelling ? '…' : '取消'}
+                        {cancelling ? '…' : 'Cancel'}
                     </button>
                 )}
                 {canDelete && (
@@ -181,7 +181,7 @@ function OrderRow({ order, cancelling, deleting, onCancel, onDelete }: {
                         disabled={deleting}
                         className="rounded px-2 py-0.5 text-[10px] text-muted-foreground border border-border hover:text-red-400 hover:border-red-400/30 hover:bg-red-400/10 transition-colors disabled:opacity-40"
                     >
-                        {deleting ? '…' : '删除'}
+                        {deleting ? '…' : 'Delete'}
                     </button>
                 )}
             </div>

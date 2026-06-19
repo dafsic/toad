@@ -8,13 +8,13 @@ interface Props {
 }
 
 const STATUSES: { value: OrderStatus | ''; label: string }[] = [
-    { value: '', label: '全部' },
-    { value: 'open', label: '挂单' },
-    { value: 'partially_filled', label: '部分成交' },
-    { value: 'filled', label: '成交' },
-    { value: 'cancelled', label: '取消' },
-    { value: 'failed', label: '失败' },
-    { value: 'pending', label: '等待' },
+    { value: '', label: 'All' },
+    { value: 'open', label: 'Open' },
+    { value: 'partially_filled', label: 'Partial' },
+    { value: 'filled', label: 'Filled' },
+    { value: 'cancelled', label: 'Cancelled' },
+    { value: 'failed', label: 'Failed' },
+    { value: 'pending', label: 'Pending' },
 ]
 
 export default function OrderFilter({ filters, onChange }: Props) {
@@ -48,7 +48,7 @@ export default function OrderFilter({ filters, onChange }: Props) {
                 onChange={e => set('exchange', e.target.value as Exchange | '')}
                 className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-xmr focus:ring-1 focus:ring-xmr/20 text-foreground"
             >
-                <option value="">全部交易所</option>
+                <option value="">All exchanges</option>
                 <option value="kraken">Kraken</option>
                 <option value="hyperliquid">Hyperliquid</option>
             </select>
@@ -59,9 +59,9 @@ export default function OrderFilter({ filters, onChange }: Props) {
                 onChange={e => set('side', e.target.value as Side | '')}
                 className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-xmr focus:ring-1 focus:ring-xmr/20 text-foreground"
             >
-                <option value="">买/卖</option>
-                <option value="buy">买入</option>
-                <option value="sell">卖出</option>
+                <option value="">Buy/Sell</option>
+                <option value="buy">Buy</option>
+                <option value="sell">Sell</option>
             </select>
 
             {/* Auto filter */}
@@ -70,9 +70,9 @@ export default function OrderFilter({ filters, onChange }: Props) {
                 onChange={e => set('is_auto', e.target.value === '' ? undefined : e.target.value === 'true')}
                 className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-xmr focus:ring-1 focus:ring-xmr/20 text-foreground"
             >
-                <option value="">手动+自动</option>
-                <option value="false">仅手动</option>
-                <option value="true">仅自动 🤖</option>
+                <option value="">Manual+Auto</option>
+                <option value="false">Manual only</option>
+                <option value="true">Auto only 🤖</option>
             </select>
         </div>
     )
