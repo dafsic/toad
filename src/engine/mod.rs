@@ -11,11 +11,11 @@ use crate::db::order::{
     set_exchange_order_id, set_order_status, update_fill_progress, CreateOrder, Order,
     UpdateOrderFilled, UpdateOrderStatus,
 };
-use crate::exchange::{ExchangeAdapter, FillEvent, OrderRequest};
+use crate::exchange::{ExchangeAdapter, ExchangeRegistry, FillEvent, OrderRequest};
 use crate::sse::{SseEvent, SseSender};
 
-/// fill channel 容量：允许两个交易所各自有一定积压
-const FILL_CHANNEL_CAPACITY: usize = 256;
+/// fill channel 容量：允许各交易所各自有一定积压
+const FILL_CHANNEL_CAPACITY: usize = 512;
 /// 轮询间隔：每 60 秒检查一次各交易所活跃订单的成交状态
 const POLL_INTERVAL_SECS: u64 = 60;
 
@@ -34,8 +34,7 @@ const POLL_INTERVAL_SECS: u64 = 60;
 /// 反向订单继承原订单的 `price_change` 和 `leverage`。
 pub struct GridEngine {
     db: SqlitePool,
-    kraken: Arc<dyn ExchangeAdapter>,
-    hyperliquid: Arc<dyn ExchangeAdapter>,
+    adapters: Arc<ExchangeRegistry>,
     sse_tx: SseSender,
     config: Arc<Config>,
 }
@@ -43,32 +42,26 @@ pub struct GridEngine {
 impl GridEngine {
     pub fn new(
         db: SqlitePool,
-        kraken: Arc<dyn ExchangeAdapter>,
-        hyperliquid: Arc<dyn ExchangeAdapter>,
+        adapters: Arc<ExchangeRegistry>,
         sse_tx: SseSender,
         config: Arc<Config>,
     ) -> Self {
         Self {
             db,
-            kraken,
-            hyperliquid,
+            adapters,
             sse_tx,
             config,
         }
     }
 
     /// 选取对应交易所的适配器。
-    fn adapter(&self, exchange: &str) -> Arc<dyn ExchangeAdapter> {
-        if exchange == "hyperliquid" {
-            Arc::clone(&self.hyperliquid)
-        } else {
-            Arc::clone(&self.kraken)
-        }
+    fn adapter(&self, exchange: &str) -> Option<Arc<dyn ExchangeAdapter>> {
+        self.adapters.get(exchange).cloned()
     }
 
     /// 启动引擎（消耗 self，在独立 tokio task 中运行）。
     ///
-    /// 1. 启动两个交易所的 `subscribe_fills`（WebSocket），汇入统一 fill channel。
+    /// 1. 为注册表中**每个**交易所启动 `subscribe_fills`（WebSocket），汇入统一 fill channel。
     ///    WebSocket 事件**仅用于更新已成交数量**，不挂对手单。
     /// 2. 启动轮询 task：每 60 秒检查各交易所活跃订单（最低卖 + 最高买），
     ///    完全成交则挂对手单。首次 tick 立即执行，替代原启动恢复逻辑。
@@ -80,46 +73,25 @@ impl GridEngine {
         // 将 self 包在 Arc 中，以便多个 spawn 和主循环共享
         let engine = Arc::new(self);
 
-        // ── 启动 Kraken 成交监听（WebSocket → 更新已成交数量）──────────────
-        {
+        // ── 启动各交易所成交监听（WebSocket → 更新已成交数量）─────────────
+        // 遍历注册表，为每个交易所独立 spawn 一个带重试的监听 task
+        for (name, adapter) in engine.adapters.iter() {
             let tx = fill_tx.clone();
-            let adapter = Arc::clone(&engine.kraken);
+            let name = name.clone();
+            let adapter = Arc::clone(adapter);
             let token = shutdown_token.clone();
             tokio::spawn(async move {
                 loop {
                     tokio::select! {
                         _ = token.cancelled() => {
-                            tracing::info!("kraken subscribe_fills received shutdown signal");
+                            tracing::info!(exchange = %name, "subscribe_fills received shutdown signal");
                             break;
                         }
                         result = adapter.subscribe_fills(tx.clone()) => {
                             if let Err(e) = result {
-                                tracing::error!("kraken subscribe_fills error: {e:#}");
+                                tracing::error!(exchange = %name, "subscribe_fills error: {e:#}");
                             }
                             // 适配器内部已做重连；若任务意外退出，此处等待后重试
-                            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-                        }
-                    }
-                }
-            });
-        }
-
-        // ── 启动 Hyperliquid 成交监听（WebSocket → 更新已成交数量）─────────
-        {
-            let tx = fill_tx.clone();
-            let adapter = Arc::clone(&engine.hyperliquid);
-            let token = shutdown_token.clone();
-            tokio::spawn(async move {
-                loop {
-                    tokio::select! {
-                        _ = token.cancelled() => {
-                            tracing::info!("hyperliquid subscribe_fills received shutdown signal");
-                            break;
-                        }
-                        result = adapter.subscribe_fills(tx.clone()) => {
-                            if let Err(e) = result {
-                                tracing::error!("hyperliquid subscribe_fills error: {e:#}");
-                            }
                             tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
                         }
                     }
@@ -131,6 +103,8 @@ impl GridEngine {
         {
             let eng = Arc::clone(&engine);
             let token = shutdown_token.clone();
+            // 固定快照注册表 key 列表（避免轮询时持有锁/迭代被并发修改）
+            let exchange_names: Vec<String> = eng.adapters.keys().cloned().collect();
             tokio::spawn(async move {
                 let mut ticker = tokio::time::interval(tokio::time::Duration::from_secs(POLL_INTERVAL_SECS));
                 // interval 首次 tick 立即返回，用于启动时恢复检查
@@ -141,10 +115,10 @@ impl GridEngine {
                             break;
                         }
                         _ = ticker.tick() => {
-                            // 每次轮询两个交易所
-                            for exchange in ["kraken", "hyperliquid"] {
+                            // 轮询所有已注册交易所
+                            for exchange in &exchange_names {
                                 if let Err(e) = eng.poll_exchange(exchange).await {
-                                    tracing::error!(exchange, "poll error: {e:#}");
+                                    tracing::error!(exchange = %exchange, "poll error: {e:#}");
                                 }
                             }
                         }
@@ -153,7 +127,7 @@ impl GridEngine {
             });
         }
 
-        // 丢掉最后一个 clone，确保 fill_rx 在两个 adapter 都退出后能感知关闭
+        // 丢掉最后一个 clone，确保 fill_rx 在所有 adapter 都退出后能感知关闭
         drop(fill_tx);
 
         // ── 主事件循环：处理 WebSocket FillEvent（仅更新已成交数量）─────────
@@ -272,7 +246,17 @@ impl GridEngine {
                 }
             };
 
-            let adapter = self.adapter(exchange);
+            let adapter = match self.adapter(exchange) {
+                Some(a) => a,
+                None => {
+                    tracing::warn!(
+                        id = order.id,
+                        exchange,
+                        "no adapter registered for exchange, skipping poll"
+                    );
+                    continue;
+                }
+            };
             let status = match adapter.get_order_status(exchange_oid, &order.symbol).await {
                 Ok(s) => s,
                 Err(e) => {
@@ -458,7 +442,9 @@ impl GridEngine {
             .send(SseEvent::OrderCreated { order_id: new_id });
 
         // 4. 提交到交易所
-        let adapter = self.adapter(&order.exchange);
+        let adapter = self.adapter(&order.exchange).ok_or_else(|| {
+            anyhow::anyhow!("no adapter registered for exchange '{}'", order.exchange)
+        })?;
         let confirmation = adapter
             .place_limit_order(&OrderRequest {
                 symbol: order.symbol.clone(),

@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 
-use crate::exchange::{ExchangeAdapter, FillEvent, OrderConfirmation, OrderRequest};
+use crate::exchange::{ExchangeAdapter, ExchangeKind, FillEvent, OrderConfirmation, OrderRequest};
 
 /// Hyperliquid 永续合约交易所适配器（逐仓模式）。
 ///
@@ -155,6 +155,10 @@ impl HyperliquidAdapter {
 
 #[async_trait]
 impl ExchangeAdapter for HyperliquidAdapter {
+    fn kind(&self) -> ExchangeKind {
+        ExchangeKind::Perp
+    }
+
     /// 提交逐仓限价单（GTC）。
     ///
     /// 流程：

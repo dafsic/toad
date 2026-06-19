@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { createOrder } from '@/lib/api'
-import type { Exchange, Side } from '@/types/order'
+import { SPOT_EXCHANGES, type Exchange, type Side } from '@/types/order'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -29,7 +29,7 @@ export default function OrderForm({ onCreated }: Props) {
                 side,
                 quantity: parseFloat(quantity),
                 price: parseFloat(price),
-                price_change: parseFloat(priceChange),
+                price_change: priceChange === '' ? 0 : parseFloat(priceChange),
                 leverage: parseInt(leverage, 10),
             })
             setSuccess(`订单 #${order.id} 已提交`)
@@ -60,6 +60,7 @@ export default function OrderForm({ onCreated }: Props) {
                         >
                             <option value="kraken">Kraken</option>
                             <option value="hyperliquid">Hyperliquid</option>
+                            <option value="mexc_spot">MEXC</option>
                         </select>
                     </div>
                     <div className="space-y-1">
@@ -86,19 +87,19 @@ export default function OrderForm({ onCreated }: Props) {
                     </div>
                 </div>
 
-                {/* Quantity + Price */}
+                {/* Price + Quantity */}
                 <div className="grid grid-cols-2 gap-2">
-                    <Field label="数量 (XMR)" value={quantity} onChange={setQuantity} placeholder="2.5" />
                     <Field label="价格 (USDC)" value={price} onChange={setPrice} placeholder="145.80" />
+                    <Field label="数量 (XMR)" value={quantity} onChange={setQuantity} placeholder="2.5" />
                 </div>
 
                 {/* Price change + Leverage */}
                 <div className="grid grid-cols-2 gap-2">
-                    <Field label="价差 Δ" value={priceChange} onChange={setPriceChange} placeholder="1.50" />
+                    <Field label="价差 Δ (0=辅助)" value={priceChange} onChange={setPriceChange} placeholder="1.50" required={false} />
                     <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">
                             杠杆 ×{leverage}
-                            {exchange === 'kraken' && <span className="ml-1 opacity-50">(Kraken 固定 1)</span>}
+                            {SPOT_EXCHANGES.includes(exchange) && <span className="ml-1 opacity-50">(现货固定 1)</span>}
                         </label>
                         <input
                             type="range"
@@ -106,7 +107,7 @@ export default function OrderForm({ onCreated }: Props) {
                             max={50}
                             step={1}
                             value={leverage}
-                            disabled={exchange === 'kraken'}
+                            disabled={SPOT_EXCHANGES.includes(exchange)}
                             onChange={e => setLeverage(e.target.value)}
                             className="w-full accent-green-500 disabled:opacity-40"
                         />
@@ -134,11 +135,12 @@ export default function OrderForm({ onCreated }: Props) {
     )
 }
 
-function Field({ label, value, onChange, placeholder }: {
+function Field({ label, value, onChange, placeholder, required = true }: {
     label: string
     value: string
     onChange: (v: string) => void
     placeholder?: string
+    required?: boolean
 }) {
     return (
         <div className="space-y-1">
@@ -147,7 +149,7 @@ function Field({ label, value, onChange, placeholder }: {
                 type="number"
                 step="any"
                 min="0"
-                required
+                required={required}
                 value={value}
                 onChange={e => onChange(e.target.value)}
                 placeholder={placeholder}

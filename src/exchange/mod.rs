@@ -1,7 +1,10 @@
 use async_trait::async_trait;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 pub mod kraken;
 pub mod hyperliquid;
+pub mod mexc;
 
 /// 统一的订单参数，用于向交易所提交限价单。
 #[derive(Debug, Clone)]
@@ -10,7 +13,7 @@ pub struct OrderRequest {
     pub side: String,       // "buy" | "sell"
     pub quantity: f64,
     pub price: f64,
-    /// 杠杆倍数。Kraken 现货固定传 1；Hyperliquid 永续合约由用户指定，
+    /// 杠杆倍数。现货固定传 1；永续合约由用户指定，
     /// 链式反向订单从父订单继承此值。
     pub leverage: u32,
 }
@@ -31,9 +34,42 @@ pub struct FillEvent {
     pub filled_quantity: f64,
 }
 
-/// 交易所适配器 Trait，Kraken 和 Hyperliquid 各自实现。
+/// 交易所账户类型。
+///
+/// - `Spot`：现货，杠杆固定为 1
+/// - `Perp`：永续合约，杠杆由用户指定（≥1）
+///
+/// 用于在统一的下单/取消流程中决定 effective leverage，取代散落各处的
+/// `if exchange == "kraken"` 分支判断。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExchangeKind {
+    Spot,
+    Perp,
+}
+
+impl ExchangeKind {
+    /// 根据账户类型与请求杠杆计算实际杠杆。
+    /// 现货恒为 1；永续取 `max(1, requested)`。
+    pub fn effective_leverage(self, requested: u32) -> u32 {
+        match self {
+            ExchangeKind::Spot => 1,
+            ExchangeKind::Perp => requested.max(1),
+        }
+    }
+}
+
+/// 交易所适配器注册表：交易所名称 → 适配器实例。
+///
+/// 由 `main.rs` 在启动时组装，注入 `AppState` 与 `GridEngine`，
+/// 取代原来散落的 `kraken` / `hyperliquid` 显式字段。
+pub type ExchangeRegistry = HashMap<String, Arc<dyn ExchangeAdapter>>;
+
+/// 交易所适配器 Trait，Kraken / Hyperliquid / MEXC 各自实现。
 #[async_trait]
 pub trait ExchangeAdapter: Send + Sync {
+    /// 该交易所的账户类型（现货 / 永续）。
+    fn kind(&self) -> ExchangeKind;
+
     /// 提交限价单（GTC）。
     async fn place_limit_order(&self, req: &OrderRequest) -> anyhow::Result<OrderConfirmation>;
 

@@ -1,6 +1,6 @@
 # Agent Instructions — Toad Grid Bot
 
-XMR/USDC 无限链式反向网格交易机器人。Kraken 现货 + Hyperliquid 永续合约（逐仓模式）。
+XMR/USDC 无限链式反向网格交易机器人。Kraken 现货 + MEXC 现货 + Hyperliquid 永续合约（逐仓模式）。
 
 ## Build Commands
 
@@ -25,12 +25,12 @@ All modules implemented. Core layers (do not modify unless fixing a confirmed bu
 | Module | Description |
 |--------|-------------|
 | `src/config.rs` | clap derive + `.env` + env var parsing |
-| `src/main.rs` | Startup orchestration: `init_pool → adapters → GridEngine → bot → Axum serve` |
+| `src/main.rs` | Startup orchestration: `init_pool → adapters (ExchangeRegistry) → GridEngine → bot → Axum serve` |
 | `src/bot/mod.rs` | teloxide 0.13; commands `/order` `/orders` `/cancel` `/login`; checks `allowed_telegram_user_id` in every handler |
 | `src/frontend/` | React 19 + Vite + Tailwind CSS + Radix UI (shadcn/ui style) |
 | `src/assets.rs` | rust-embed fallback (SPA → index.html) |
-| `src/exchange/` | `ExchangeAdapter` trait + Kraken/Hyperliquid adapters |
-| `src/engine/` | GridEngine: WebSocket fill updates + polling-driven reverse orders |
+| `src/exchange/` | `ExchangeAdapter` trait + `ExchangeKind`/`ExchangeRegistry` + Kraken/Hyperliquid/MEXC adapters |
+| `src/engine/` | GridEngine: WebSocket fill updates + polling-driven reverse orders; iterates `ExchangeRegistry` |
 | `src/api/` | Axum 0.8 REST handlers + router |
 | `src/sse/` | Server-Sent Events broadcast |
 | `src/db/` | SQLite + sqlx, `sqlx::migrate!` auto-migration |
@@ -40,7 +40,8 @@ All modules implemented. Core layers (do not modify unless fixing a confirmed bu
 
 - Order status flow: `pending → open → partially_filled → filled | cancelled | failed`
 - Always **write `pending` to DB first**, then call exchange, then upgrade to `open` or `failed`
-- `leverage`: Kraken always 1; Hyperliquid ≥ 1, inherited by counter-orders
+- `leverage`: Spot (kraken/mexc_spot) always 1; Perp (hyperliquid) ≥ 1, inherited by counter-orders. Use `adapter.kind().effective_leverage(req)` instead of string checks
+- **Adapter dispatch**: `ExchangeRegistry = HashMap<String, Arc<dyn ExchangeAdapter>>`; all callers (api/bot/engine) look up by exchange name, no hard-coded branches
 - **Reverse order pricing**: based on `order.price ± price_change` (not filled_price), ensuring fixed grid spacing
 - **Assisted mode**: `price_change == 0` means assisted order only — still submitted & tracked, but no reverse order is placed after fill
 - **WebSocket vs Polling**: WebSocket only updates `filled_quantity` → `partially_filled`; polling (60s) detects full fills and places reverse orders. Grid works even if WebSocket is down.
@@ -59,7 +60,7 @@ All modules implemented. Core layers (do not modify unless fixing a confirmed bu
 
 ### Polling & Recovery
 - `GridEngine::run()` starts a polling task (`tokio::time::interval`, 60s) whose first tick fires immediately
-- Each tick calls `poll_exchange("kraken")` + `poll_exchange("hyperliquid")`
+- Each tick calls `poll_exchange` for every exchange in the `ExchangeRegistry`
 - `poll_exchange` queries active orders (`open` + `partially_filled`), picks the lowest sell + highest buy, checks exchange status
 - **filled** → uses `order.price` as filled_price → triggers `handle_filled_order()` → creates reverse order
 - **cancelled** → updates DB to `cancelled`, sends SSE + Telegram notification
@@ -70,6 +71,7 @@ All modules implemented. Core layers (do not modify unless fixing a confirmed bu
 ```
 TELEGRAM_BOT_TOKEN, ALLOWED_TELEGRAM_USER_ID
 KRAKEN_API_KEY, KRAKEN_API_SECRET
+MEXC_API_KEY, MEXC_API_SECRET
 HYPERLIQUID_PRIVATE_KEY, HYPERLIQUID_ACCOUNT_ADDRESS, HYPERLIQUID_TESTNET
 JWT_SECRET (default: change-me-in-production)
 DATABASE_URL (default: sqlite:data/bot.db), SERVER_ADDR (default: 0.0.0.0:3000)

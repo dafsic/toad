@@ -7,8 +7,16 @@ interface Props {
 }
 
 export default function ExchangeLogo({ exchange, size = 20, className = '' }: Props) {
-    const src = exchange === 'kraken' ? '/kraken.png' : '/hyperliquid.png'
-    const alt = exchange === 'kraken' ? 'Kraken' : 'Hyperliquid'
+    const src = exchange === 'kraken'
+        ? '/kraken.png'
+        : exchange === 'hyperliquid'
+            ? '/hyperliquid.png'
+            : '/mexc.png'
+    const alt = exchange === 'kraken'
+        ? 'Kraken'
+        : exchange === 'hyperliquid'
+            ? 'Hyperliquid'
+            : 'MEXC'
 
     return (
         <img

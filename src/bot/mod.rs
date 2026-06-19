@@ -80,12 +80,20 @@ async fn handle_order(
         return reply(
             &bot, &msg,
             "用法：<code>/order &lt;exchange&gt; &lt;side&gt; &lt;qty&gt; &lt;price&gt; &lt;price_change&gt; [leverage]</code>\n\
+             exchange: kraken / hyperliquid / mexc_spot\n\
              示例：<code>/order kraken buy 2.5 145.80 1.50</code>",
         ).await;
     }
 
     let exchange = parts[0];
     let side = parts[1];
+
+    // 适配器查找 + 校验
+    let adapter: Arc<dyn ExchangeAdapter> = match state.adapters.get(exchange) {
+        Some(a) => Arc::clone(a),
+        None => return reply(&bot, &msg, "❌ exchange 必须为 kraken / hyperliquid / mexc_spot").await,
+    };
+
     let quantity: f64 = match parts[2].parse() {
         Ok(v) => v,
         Err(_) => return reply(&bot, &msg, "❌ qty 无效").await,
@@ -108,9 +116,6 @@ async fn handle_order(
     };
 
     // 基础校验
-    if exchange != "kraken" && exchange != "hyperliquid" {
-        return reply(&bot, &msg, "❌ exchange 必须为 kraken 或 hyperliquid").await;
-    }
     if side != "buy" && side != "sell" {
         return reply(&bot, &msg, "❌ side 必须为 buy 或 sell").await;
     }
@@ -121,11 +126,7 @@ async fn handle_order(
         return reply(&bot, &msg, "❌ price_change 不能为负（0=辅助下单，不挂对手单）").await;
     }
 
-    let effective_leverage = if exchange == "kraken" {
-        1
-    } else {
-        leverage.max(1)
-    };
+    let effective_leverage = adapter.kind().effective_leverage(leverage);
 
     // 先写 pending 入库
     let db_id = match crate::db::order::insert_order(
@@ -150,13 +151,7 @@ async fn handle_order(
         Err(e) => return reply(&bot, &msg, &format!("❌ 数据库错误：{e:#}")).await,
     };
 
-    // 提交交易所
-    let adapter: Arc<dyn ExchangeAdapter> = if exchange == "hyperliquid" {
-        Arc::clone(&state.hyperliquid)
-    } else {
-        Arc::clone(&state.kraken)
-    };
-
+    // 提交交易所（adapter 已在上方校验阶段取到）
     match adapter
         .place_limit_order(&crate::exchange::OrderRequest {
             symbol: "XMR/USDC".to_string(),
@@ -308,10 +303,9 @@ async fn handle_cancel(
         None => return reply(&bot, &msg, "❌ 订单尚无交易所 ID").await,
     };
 
-    let adapter: Arc<dyn ExchangeAdapter> = if order.exchange == "hyperliquid" {
-        Arc::clone(&state.hyperliquid)
-    } else {
-        Arc::clone(&state.kraken)
+    let adapter: Arc<dyn ExchangeAdapter> = match state.adapters.get(&order.exchange) {
+        Some(a) => Arc::clone(a),
+        None => return reply(&bot, &msg, &format!("❌ 无 {} 适配器", order.exchange)).await,
     };
 
     match adapter.cancel_order(&exchange_oid, &order.symbol).await {

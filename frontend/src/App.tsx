@@ -75,10 +75,11 @@ export default function App() {
             </header>
 
             <main className="p-4 lg:p-6 space-y-4">
-                {/* Two exchange panels side by side */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Exchange panels side by side */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                     <ExchangePanel exchange="kraken" onCreated={onOrderCreated} />
                     <ExchangePanel exchange="hyperliquid" onCreated={onOrderCreated} />
+                    <ExchangePanel exchange="mexc_spot" onCreated={onOrderCreated} />
                 </div>
 
                 {/* Order list spanning full width */}

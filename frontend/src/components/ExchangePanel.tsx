@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { createOrder } from '@/lib/api'
-import type { Exchange, Side } from '@/types/order'
+import { EXCHANGE_LABELS, SPOT_EXCHANGES, type Exchange, type Side } from '@/types/order'
 import { cn } from '@/lib/utils'
 import ExchangeLogo from '@/components/ExchangeLogo'
 import { usePrice } from '@/hooks/usePrice'
@@ -20,7 +20,7 @@ export default function ExchangePanel({ exchange, onCreated }: Props) {
     const [error, setError] = useState<string | null>(null)
     const [successId, setSuccessId] = useState<number | null>(null)
 
-    const isHyperliquid = exchange === 'hyperliquid'
+    const isSpot = SPOT_EXCHANGES.includes(exchange)
     const { price: marketPrice, loading: priceLoading, error: priceError } = usePrice(exchange)
 
     async function handleSubmit(e: FormEvent) {
@@ -34,7 +34,7 @@ export default function ExchangePanel({ exchange, onCreated }: Props) {
                 side,
                 quantity: parseFloat(quantity),
                 price: parseFloat(price),
-                price_change: parseFloat(priceChange),
+                price_change: priceChange === '' ? 0 : parseFloat(priceChange),
                 leverage: parseInt(leverage, 10),
             })
             setSuccessId(order.id)
@@ -56,7 +56,7 @@ export default function ExchangePanel({ exchange, onCreated }: Props) {
                 <div className="flex items-center gap-2">
                     <ExchangeLogo exchange={exchange} size={24} />
                     <span className="text-sm font-bold tracking-wide text-foreground">
-                        {exchange === 'kraken' ? 'Kraken' : 'Hyperliquid'}
+                        {EXCHANGE_LABELS[exchange]}
                     </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -93,11 +93,11 @@ export default function ExchangePanel({ exchange, onCreated }: Props) {
                     ))}
                 </div>
 
-                <Field label="QTY (XMR)" value={quantity} onChange={setQuantity} placeholder="2.5" />
                 <Field label="PRICE (USDC)" value={price} onChange={setPrice} placeholder="145.80" />
-                <Field label="Δ PRICE" value={priceChange} onChange={setPriceChange} placeholder="1.50" />
+                <Field label="QTY (XMR)" value={quantity} onChange={setQuantity} placeholder="2.5" />
+                <Field label="Δ PRICE (0=ASSISTED)" value={priceChange} onChange={setPriceChange} placeholder="1.50" required={false} />
 
-                {isHyperliquid && (
+                {!isSpot && (
                     <div className="space-y-1.5">
                         <label className="text-xs text-muted-foreground tracking-widest uppercase flex justify-between">
                             <span>LEVERAGE</span>
@@ -145,11 +145,13 @@ function Field({
     value,
     onChange,
     placeholder,
+    required = true,
 }: {
     label: string
     value: string
     onChange: (v: string) => void
     placeholder?: string
+    required?: boolean
 }) {
     return (
         <div className="space-y-1.5">
@@ -158,7 +160,7 @@ function Field({
                 type="number"
                 step="any"
                 min="0"
-                required
+                required={required}
                 value={value}
                 onChange={e => onChange(e.target.value)}
                 placeholder={placeholder}

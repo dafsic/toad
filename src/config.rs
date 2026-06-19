@@ -37,6 +37,15 @@ pub struct Config {
     #[arg(long, env = "HYPERLIQUID_TESTNET", default_value_t = false)]
     pub hyperliquid_testnet: bool,
 
+    // ── MEXC ───────────────────────────────────────────────────────────────
+    /// MEXC API Key
+    #[arg(long, env = "MEXC_API_KEY")]
+    pub mexc_api_key: String,
+
+    /// MEXC API Secret
+    #[arg(long, env = "MEXC_API_SECRET")]
+    pub mexc_api_secret: String,
+
     // ── Server ──────────────────────────────────────────────────────────────
     /// HTTP 监听地址
     #[arg(long, env = "SERVER_ADDR", default_value = "0.0.0.0:3000")]

@@ -1,6 +1,16 @@
-export type Exchange = 'kraken' | 'hyperliquid'
+export type Exchange = 'kraken' | 'hyperliquid' | 'mexc_spot'
 export type Side = 'buy' | 'sell'
 export type OrderStatus = 'pending' | 'open' | 'partially_filled' | 'filled' | 'cancelled' | 'failed'
+
+/** 现货交易所列表：UI 据此隐藏杠杆滑块（现货杠杆固定为 1） */
+export const SPOT_EXCHANGES: Exchange[] = ['kraken', 'mexc_spot']
+
+/** 交易所显示名称 */
+export const EXCHANGE_LABELS: Record<Exchange, string> = {
+    kraken: 'Kraken',
+    hyperliquid: 'Hyperliquid',
+    mexc_spot: 'MEXC',
+}
 
 export interface Order {
     id: number

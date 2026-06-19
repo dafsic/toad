@@ -13,7 +13,7 @@ use sha2::{Digest, Sha256, Sha512};
 use tokio::sync::mpsc;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 
-use crate::exchange::{ExchangeAdapter, FillEvent, OrderConfirmation, OrderRequest};
+use crate::exchange::{ExchangeAdapter, ExchangeKind, FillEvent, OrderConfirmation, OrderRequest};
 
 const REST_BASE: &str = "https://api.kraken.com";
 const WS_URL: &str = "wss://ws-auth.kraken.com/v2";
@@ -181,6 +181,10 @@ struct WsExecutionData {
 
 #[async_trait]
 impl ExchangeAdapter for KrakenAdapter {
+    fn kind(&self) -> ExchangeKind {
+        ExchangeKind::Spot
+    }
+
     /// 提交 GTC 限价单。
     /// Kraken 现货不需要杠杆，`req.leverage` 字段忽略（固定为 1）。
     async fn place_limit_order(&self, req: &OrderRequest) -> anyhow::Result<OrderConfirmation> {

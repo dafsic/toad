@@ -40,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("init db")?;
 
-    // 4. 构建交易所适配器
+    // 4. 构建交易所适配器，组装成统一注册表
     let kraken: Arc<dyn exchange::ExchangeAdapter> =
         Arc::new(exchange::kraken::KrakenAdapter::new(
             config.kraken_api_key.clone(),
@@ -56,6 +56,18 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("init hyperliquid adapter")?,
     );
+
+    let mexc_spot: Arc<dyn exchange::ExchangeAdapter> =
+        Arc::new(exchange::mexc::MexcSpotAdapter::new(
+            config.mexc_api_key.clone(),
+            config.mexc_api_secret.clone(),
+        ));
+
+    let mut adapters = exchange::ExchangeRegistry::new();
+    adapters.insert("kraken".to_string(), Arc::clone(&kraken));
+    adapters.insert("hyperliquid".to_string(), Arc::clone(&hyperliquid));
+    adapters.insert("mexc_spot".to_string(), Arc::clone(&mexc_spot));
+    let adapters = Arc::new(adapters);
 
     // 5. 创建全局关闭信号 token
     let shutdown_token = CancellationToken::new();
@@ -76,8 +88,7 @@ async fn main() -> anyhow::Result<()> {
     let state = Arc::new(api::AppState {
         config: Arc::clone(&config),
         db: pool.clone(),
-        kraken: Arc::clone(&kraken),
-        hyperliquid: Arc::clone(&hyperliquid),
+        adapters: Arc::clone(&adapters),
         sse_tx: sse_tx.clone(),
         auth_store,
     });
@@ -86,8 +97,7 @@ async fn main() -> anyhow::Result<()> {
     let engine_handle = {
         let engine = engine::GridEngine::new(
             pool.clone(),
-            Arc::clone(&kraken),
-            Arc::clone(&hyperliquid),
+            Arc::clone(&adapters),
             sse_tx.clone(),
             Arc::clone(&config),
         );

@@ -146,7 +146,11 @@ function OrderRow({ order, cancelling, deleting, onCancel, onDelete }: {
             </span>
             <span className="flex items-center gap-1.5 truncate">
                 <ExchangeLogo exchange={order.exchange} size={14} />
-                <span className="capitalize text-xs">{order.exchange === 'kraken' ? 'Kraken' : 'HL'}</span>
+                <span className="capitalize text-xs">
+                    {order.exchange === 'kraken' ? 'Kraken'
+                        : order.exchange === 'hyperliquid' ? 'HL'
+                        : 'MEXC'}
+                </span>
             </span>
             <span className={cn('font-medium', sideColor)}>
                 {order.side === 'buy' ? 'Buy' : 'Sell'}

@@ -1,6 +1,6 @@
 # 🐸 Toad Grid Bot
 
-XMR/USDC 无限链式反向网格交易机器人。支持 **Kraken 现货** 和 **Hyperliquid 永续合约**（逐仓模式）。
+XMR/USDC 无限链式反向网格交易机器人。支持 **Kraken 现货**、**MEXC 现货** 和 **Hyperliquid 永续合约**（逐仓模式）。
 
 用户手动下一笔限价单，成交后系统自动以固定价差挂出反向限价单，持续 ping-pong 振荡，直到手动取消为止。支持同时运行多个独立网格。
 
@@ -57,6 +57,8 @@ DATABASE_URL=sqlite:data/bot.db cargo run
 | `ALLOWED_TELEGRAM_USER_ID` | 允许操作的 Telegram User ID | 必填 |
 | `KRAKEN_API_KEY` | Kraken API Key | 必填 |
 | `KRAKEN_API_SECRET` | Kraken API Secret（Base64）| 必填 |
+| `MEXC_API_KEY` | MEXC API Key | 必填 |
+| `MEXC_API_SECRET` | MEXC API Secret | 必填 |
 | `HYPERLIQUID_PRIVATE_KEY` | Hyperliquid API 钱包私钥（hex）| 必填 |
 | `HYPERLIQUID_ACCOUNT_ADDRESS` | 主账户地址（API agent wallet 时填写）| 空 |
 | `HYPERLIQUID_TESTNET` | 连接测试网 | `false` |
@@ -101,6 +103,7 @@ DATABASE_URL=sqlite:data/bot.db cargo run
 ```
 /order kraken buy 2.5 145.80 1.50
 /order hyperliquid sell 1.0 150.00 2.00 5
+/order mexc_spot buy 2.5 145.80 1.50
 /cancel 42
 ```
 
@@ -199,6 +202,7 @@ npm run build --prefix frontend && cargo build --release
 | 实时推送 | Server-Sent Events |
 | 认证 | JWT (HS256, jsonwebtoken) |
 | Hyperliquid | [hypersdk](https://github.com/infinitefield/hypersdk)（git 主分支） |
+| MEXC 现货 | reqwest + tokio-tungstenite（HMAC-SHA256 + listenKey 用户数据流）|
 
 ---
 

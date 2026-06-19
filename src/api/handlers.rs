@@ -101,9 +101,15 @@ pub async fn create_order(
     Json(req): Json<CreateOrderRequest>,
 ) -> Result<(StatusCode, Json<OrderResponse>), (StatusCode, String)> {
     // 参数校验
-    if req.exchange != "kraken" && req.exchange != "hyperliquid" {
-        return Err(bad_request("exchange must be 'kraken' or 'hyperliquid'"));
-    }
+    let adapter = match state.adapters.get(&req.exchange) {
+        Some(a) => a.clone(),
+        None => {
+            return Err(bad_request(&format!(
+                "unsupported exchange '{}'",
+                req.exchange
+            )))
+        }
+    };
     if req.side != "buy" && req.side != "sell" {
         return Err(bad_request("side must be 'buy' or 'sell'"));
     }
@@ -117,7 +123,7 @@ pub async fn create_order(
         return Err(bad_request("price_change must be >= 0 (0 = assisted, no reverse leg)"));
     }
 
-    let leverage = if req.exchange == "kraken" { 1 } else { req.leverage.max(1) };
+    let leverage = adapter.kind().effective_leverage(req.leverage);
 
     // 1. 先写 pending 记录（防止崩溃丢单）
     let id = insert_order(&state.db, &CreateOrder {
@@ -137,12 +143,6 @@ pub async fn create_order(
     .map_err(internal)?;
 
     // 2. 向交易所提交
-    let adapter = if req.exchange == "hyperliquid" {
-        state.hyperliquid.clone()
-    } else {
-        state.kraken.clone()
-    };
-
     let confirmation = adapter
         .place_limit_order(&OrderRequest {
             symbol:   "XMR/USDC".to_string(),
@@ -181,7 +181,7 @@ pub async fn create_order(
 /// `GET /api/orders` — 游标分页查询订单列表
 ///
 /// 查询参数：
-/// - `exchange`  过滤交易所（kraken / hyperliquid）
+/// - `exchange`  过滤交易所（kraken / hyperliquid / mexc_spot）
 /// - `side`      过滤方向（buy / sell）
 /// - `status`    过滤状态（pending / open / filled / cancelled / failed）
 /// - `is_auto`   过滤是否自动生成（true / false）
@@ -240,10 +240,14 @@ pub async fn cancel_order(
         .as_deref()
         .ok_or_else(|| bad_request("order has no exchange_order_id yet"))?;
 
-    let adapter = if order.exchange == "hyperliquid" {
-        state.hyperliquid.clone()
-    } else {
-        state.kraken.clone()
+    let adapter = match state.adapters.get(&order.exchange) {
+        Some(a) => a.clone(),
+        None => {
+            return Err(internal(anyhow::anyhow!(
+                "adapter for exchange '{}' not registered",
+                order.exchange
+            )))
+        }
     };
 
     adapter
@@ -295,6 +299,81 @@ pub async fn delete_order(
 
     tracing::info!(id, status = order.status, "order deleted from db");
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// `GET /api/price/:exchange` — 查询交易所 XMR/USDC 最新价格（无需认证）。
+///
+/// 在后端代理外部 API 调用，避免浏览器直接访问交易所 API 时的 CORS 限制。
+/// 返回 `{"price": "145.80"}`，价格保留 2 位小数。
+pub async fn get_price(
+    Path(exchange): Path<String>,
+) -> Result<Json<PriceResponse>, (StatusCode, String)> {
+    let client = reqwest::Client::new();
+    let price = match exchange.as_str() {
+        "kraken" => {
+            #[derive(Deserialize)]
+            struct KrakenTicker {
+                result: serde_json::Value,
+            }
+            let resp: KrakenTicker = client
+                .get("https://api.kraken.com/0/public/Ticker?pair=XMRUSDC")
+                .send()
+                .await
+                .map_err(|e| (StatusCode::BAD_GATEWAY, format!("kraken ticker: {e:#}")))?
+                .json()
+                .await
+                .map_err(|e| (StatusCode::BAD_GATEWAY, format!("kraken parse: {e:#}")))?;
+            let p = resp.result["XMRUSDC"]["c"][0]
+                .as_str()
+                .ok_or((StatusCode::BAD_GATEWAY, "kraken: no price".to_string()))?;
+            p.to_string()
+        }
+        "hyperliquid" => {
+            let resp: serde_json::Value = client
+                .post("https://api.hyperliquid.xyz/info")
+                .header("Content-Type", "application/json")
+                .body(r#"{"type":"allMids"}"#)
+                .send()
+                .await
+                .map_err(|e| (StatusCode::BAD_GATEWAY, format!("hl ticker: {e:#}")))?
+                .json()
+                .await
+                .map_err(|e| (StatusCode::BAD_GATEWAY, format!("hl parse: {e:#}")))?;
+            resp["XMR"]
+                .as_str()
+                .ok_or((StatusCode::BAD_GATEWAY, "hyperliquid: no price".to_string()))?
+                .to_string()
+        }
+        "mexc_spot" => {
+            #[derive(Deserialize)]
+            struct MexcTicker {
+                price: String,
+            }
+            let resp: MexcTicker = client
+                .get("https://api.mexc.com/api/v3/ticker/price?symbol=XMRUSDC")
+                .send()
+                .await
+                .map_err(|e| (StatusCode::BAD_GATEWAY, format!("mexc ticker: {e:#}")))?
+                .json()
+                .await
+                .map_err(|e| (StatusCode::BAD_GATEWAY, format!("mexc parse: {e:#}")))?;
+            resp.price
+        }
+        other => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                format!("unsupported exchange '{other}'"),
+            ))
+        }
+    };
+
+    let formatted = format!("{:.2}", price.parse::<f64>().unwrap_or(0.0));
+    Ok(Json(PriceResponse { price: formatted }))
+}
+
+#[derive(Debug, Serialize)]
+pub struct PriceResponse {
+    pub price: String,
 }
 
 // ── 辅助转换 ──────────────────────────────────────────────────────────────────

@@ -51,6 +51,7 @@ export default function OrderFilter({ filters, onChange }: Props) {
                 <option value="">All exchanges</option>
                 <option value="kraken">Kraken</option>
                 <option value="hyperliquid">Hyperliquid</option>
+                <option value="mexc_spot">MEXC</option>
             </select>
 
             {/* Side filter */}
