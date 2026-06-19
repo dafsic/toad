@@ -42,6 +42,7 @@ All modules implemented. Core layers (do not modify unless fixing a confirmed bu
 - Always **write `pending` to DB first**, then call exchange, then upgrade to `open` or `failed`
 - `leverage`: Kraken always 1; Hyperliquid ≥ 1, inherited by counter-orders
 - **Reverse order pricing**: based on `order.price ± price_change` (not filled_price), ensuring fixed grid spacing
+- **Assisted mode**: `price_change == 0` means assisted order only — still submitted & tracked, but no reverse order is placed after fill
 - **WebSocket vs Polling**: WebSocket only updates `filled_quantity` → `partially_filled`; polling (60s) detects full fills and places reverse orders. Grid works even if WebSocket is down.
 - **Race condition protection**: `update_fill_progress()` and `mark_order_filled()` use `WHERE status IN ('open','partially_filled')` conditional updates
 - Hyperliquid: use `hypersdk = { git = "..." }` (not crates.io); call `update_leverage(is_cross=false)` before every order

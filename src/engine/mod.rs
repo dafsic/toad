@@ -381,6 +381,26 @@ impl GridEngine {
             status: "filled".to_string(),
         });
 
+        // 辅助模式：price_change == 0 表示仅辅助下单，成交后不挂对手单。
+        // 仍发送成交通知（去掉「下一口」行），然后提前返回。
+        if order.price_change == 0.0 {
+            let notify_assisted = format!(
+                "✅ <b>成交</b>  #{id}\n\
+                 {exchange} {side}  {qty:.4} @ <b>{price:.4}</b>\n\
+                 辅助模式：不挂对手单",
+                id = order.id,
+                exchange = order.exchange,
+                side = order.side,
+                qty = order.quantity,
+                price = order.price,
+            );
+            if let Err(e) = crate::bot::send_notification(&self.config, &notify_assisted).await {
+                tracing::warn!("telegram notify (assisted filled) failed: {e:#}");
+            }
+            tracing::info!(id = order.id, "assisted order filled, no reverse leg");
+            return Ok(());
+        }
+
         // 通知 Telegram：原订单已成交
         let reverse_side = if order.side == "buy" { "sell" } else { "buy" };
         let reverse_price = if order.side == "buy" {

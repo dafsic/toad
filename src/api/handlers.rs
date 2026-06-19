@@ -113,8 +113,8 @@ pub async fn create_order(
     if req.price <= 0.0 {
         return Err(bad_request("price must be > 0"));
     }
-    if req.price_change <= 0.0 {
-        return Err(bad_request("price_change must be > 0"));
+    if req.price_change < 0.0 {
+        return Err(bad_request("price_change must be >= 0 (0 = assisted, no reverse leg)"));
     }
 
     let leverage = if req.exchange == "kraken" { 1 } else { req.leverage.max(1) };

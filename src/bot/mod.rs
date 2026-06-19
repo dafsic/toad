@@ -114,8 +114,11 @@ async fn handle_order(
     if side != "buy" && side != "sell" {
         return reply(&bot, &msg, "❌ side 必须为 buy 或 sell").await;
     }
-    if quantity <= 0.0 || price <= 0.0 || price_change <= 0.0 {
-        return reply(&bot, &msg, "❌ qty/price/price_change 必须大于 0").await;
+    if quantity <= 0.0 || price <= 0.0 {
+        return reply(&bot, &msg, "❌ qty/price 必须大于 0").await;
+    }
+    if price_change < 0.0 {
+        return reply(&bot, &msg, "❌ price_change 不能为负（0=辅助下单，不挂对手单）").await;
     }
 
     let effective_leverage = if exchange == "kraken" {
