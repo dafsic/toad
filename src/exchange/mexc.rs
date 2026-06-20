@@ -273,10 +273,26 @@ impl ExchangeAdapter for MexcSpotAdapter {
 
     /// 订阅成交事件（用户数据流）。
     ///
-    /// 流程：获取 listenKey → 连接 `wss://wbs.mexc.com?listenKey=…`
+    /// ⚠️ MEXC WebSocket 已禁用（API key 权限/地区限制导致订阅被拒）。
+    /// 订单成交状态完全依赖轮询（`poll_exchange`，每 60 秒），网格正常运行不受影响。
+    ///
+    /// 原流程：获取 listenKey → 连接 `wss://wbs.mexc.com?listenKey=…`
     /// → 每 30 分钟 PUT 续期 → 解析订单事件推送累计成交量 → FillEvent。
-    /// 连接断开后指数退避重连。
-    async fn subscribe_fills(&self, tx: mpsc::Sender<FillEvent>) -> anyhow::Result<()> {
+    async fn subscribe_fills(&self, _tx: mpsc::Sender<FillEvent>) -> anyhow::Result<()> {
+        tracing::warn!("mexc_spot: WebSocket disabled — relying on polling only");
+        // Block forever; the engine's shutdown token will cancel this task.
+        std::future::pending::<()>().await;
+        Ok(())
+    }
+}
+
+impl MexcSpotAdapter {
+    /// MEXC WebSocket 订阅的原始实现（保留以供未来启用）。
+    ///
+    /// 流程：获取 listenKey → 连接 `wss://wbs.mexc.com?listenKey=…`
+    /// → 每 10 秒发 PING 保活 → 每 30 分钟 PUT 续期 → 解析订单事件推送累计成交量。
+    #[allow(dead_code)]
+    async fn subscribe_fills_ws(&self, tx: mpsc::Sender<FillEvent>) -> anyhow::Result<()> {
         const INITIAL_DELAY_MS: u64 = 1_000;
         const MAX_DELAY_MS: u64 = 30_000;
         let mut delay_ms = INITIAL_DELAY_MS;
@@ -321,6 +337,23 @@ impl ExchangeAdapter for MexcSpotAdapter {
                 tracing::error!("mexc_spot: WS subscribe send failed: {e:#}");
                 continue;
             }
+
+            // 等待订阅响应（第一条文本消息），确认订阅成功
+            let subscribed = match stream.next().await {
+                Some(Ok(Message::Text(t))) => {
+                    tracing::debug!(raw = %t, "mexc_spot: subscribe response");
+                    !t.contains("Not Subscribed") && !t.contains("Blocked")
+                }
+                _ => false,
+            };
+            if !subscribed {
+                tracing::error!("mexc_spot: subscription rejected by MEXC (check API key permissions / region restrictions)");
+                // 关闭连接，等待重连重试
+                let _ = sink.send(Message::Close(None)).await;
+                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                delay_ms = (delay_ms * 2).min(MAX_DELAY_MS);
+                continue;
+            }
             tracing::info!("mexc_spot: subscribed to spot@private.orders.v3.api");
 
             // 启动 listenKey 保活任务（PUT 续期同样需要签名）
@@ -363,75 +396,98 @@ impl ExchangeAdapter for MexcSpotAdapter {
                 }
             });
 
-            // 消息处理循环
+            // 消息处理循环：每 10 秒发应用层 PING 保活，否则 MEXC 服务端 ~30 秒后断开
+            let mut ping_interval =
+                tokio::time::interval(tokio::time::Duration::from_secs(10));
+            // 跳过首次 tick（连接刚建立不需要立即 ping）
+            ping_interval.tick().await;
+
             'recv: loop {
-                let msg = match stream.next().await {
-                    Some(Ok(m)) => m,
-                    Some(Err(e)) => {
-                        tracing::warn!("mexc_spot: WS error: {e:#}");
-                        break 'recv;
+                tokio::select! {
+                    msg = stream.next() => {
+                        let msg = match msg {
+                            Some(Ok(m)) => m,
+                            Some(Err(e)) => {
+                                tracing::warn!("mexc_spot: WS error: {e:#}");
+                                break 'recv;
+                            }
+                            None => {
+                                tracing::warn!("mexc_spot: WS stream closed by server");
+                                break 'recv;
+                            }
+                        };
+
+                        let text = match msg {
+                            Message::Text(t) => {
+                                tracing::debug!(raw = %t, "mexc_spot: WS received");
+                                t
+                            }
+                            Message::Binary(b) => {
+                                tracing::debug!(len = b.len(), "mexc_spot: WS binary received");
+                                continue 'recv;
+                            }
+                            Message::Ping(data) => {
+                                let _ = sink.send(Message::Pong(data)).await;
+                                continue 'recv;
+                            }
+                            Message::Close(reason) => {
+                                tracing::info!(?reason, "mexc_spot: WS close frame received");
+                                break 'recv;
+                            }
+                            _ => continue 'recv,
+                        };
+
+                        // MEXC 订单事件：channel 为 spot@private.orders.v3.api 且含 privateOrders
+                        let ws_msg: WsOrderMsg = match serde_json::from_str(&text) {
+                            Ok(m) => m,
+                            Err(_) => continue 'recv, // 心跳 / 订阅确认等
+                        };
+
+                        // 仅处理订单频道消息
+                        let is_order_channel = ws_msg
+                            .channel
+                            .as_deref()
+                            .is_some_and(|c| c.starts_with("spot@private.orders"));
+                        if !is_order_channel {
+                            continue 'recv;
+                        }
+
+                        let orders = match ws_msg.privateOrders {
+                            Some(o) => o,
+                            None => continue 'recv,
+                        };
+
+                        // 累计成交量 > 0 时推送（部分成交 status=3 或完全成交 status=2）
+                        let cum_qty: f64 = match orders.cumulativeQuantity.parse() {
+                            Ok(v) => v,
+                            Err(_) => continue 'recv,
+                        };
+                        if cum_qty <= 0.0 {
+                            continue 'recv;
+                        }
+
+                        tracing::info!(
+                            order_id = orders.id,
+                            cum_qty = cum_qty,
+                            status = orders.status.unwrap_or(0),
+                            "mexc_spot fill progress"
+                        );
+                        let event = FillEvent {
+                            exchange_order_id: orders.id,
+                            filled_quantity: cum_qty,
+                        };
+                        if tx.send(event).await.is_err() {
+                            keepalive_handle.abort();
+                            return Ok(());
+                        }
                     }
-                    None => {
-                        tracing::warn!("mexc_spot: WS stream closed by server");
-                        break 'recv;
+                    _ = ping_interval.tick() => {
+                        // MEXC requires application-level PING (text message), not WS protocol Ping
+                        if let Err(e) = sink.send(Message::Text(r#"{"method":"PING"}"#.to_string())).await {
+                            tracing::warn!("mexc_spot: WS ping send failed: {e:#}");
+                            break 'recv;
+                        }
                     }
-                };
-
-                let text = match msg {
-                    Message::Text(t) => t,
-                    Message::Ping(data) => {
-                        let _ = sink.send(Message::Pong(data)).await;
-                        continue 'recv;
-                    }
-                    Message::Close(_) => {
-                        tracing::info!("mexc_spot: WS close frame received");
-                        break 'recv;
-                    }
-                    _ => continue 'recv,
-                };
-
-                // MEXC 订单事件：channel 为 spot@private.orders.v3.api 且含 privateOrders
-                let ws_msg: WsOrderMsg = match serde_json::from_str(&text) {
-                    Ok(m) => m,
-                    Err(_) => continue 'recv, // 心跳 / 订阅确认等
-                };
-
-                // 仅处理订单频道消息
-                let is_order_channel = ws_msg
-                    .channel
-                    .as_deref()
-                    .is_some_and(|c| c.starts_with("spot@private.orders"));
-                if !is_order_channel {
-                    continue 'recv;
-                }
-
-                let orders = match ws_msg.privateOrders {
-                    Some(o) => o,
-                    None => continue 'recv,
-                };
-
-                // 累计成交量 > 0 时推送（部分成交 status=3 或完全成交 status=2）
-                let cum_qty: f64 = match orders.cumulativeQuantity.parse() {
-                    Ok(v) => v,
-                    Err(_) => continue 'recv,
-                };
-                if cum_qty <= 0.0 {
-                    continue 'recv;
-                }
-
-                tracing::info!(
-                    order_id = orders.id,
-                    cum_qty = cum_qty,
-                    status = orders.status.unwrap_or(0),
-                    "mexc_spot fill progress"
-                );
-                let event = FillEvent {
-                    exchange_order_id: orders.id,
-                    filled_quantity: cum_qty,
-                };
-                if tx.send(event).await.is_err() {
-                    keepalive_handle.abort();
-                    return Ok(());
                 }
             }
 

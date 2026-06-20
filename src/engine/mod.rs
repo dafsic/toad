@@ -17,7 +17,7 @@ use crate::sse::{SseEvent, SseSender};
 /// fill channel 容量：允许各交易所各自有一定积压
 const FILL_CHANNEL_CAPACITY: usize = 512;
 /// 轮询间隔：每 60 秒检查一次各交易所活跃订单的成交状态
-const POLL_INTERVAL_SECS: u64 = 60;
+const POLL_INTERVAL_SECS: u64 = 30;
 
 /// 网格引擎：WebSocket 更新部分成交进度 + 轮询驱动链式反向挂单。
 ///
