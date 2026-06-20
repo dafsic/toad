@@ -1,5 +1,4 @@
 use anyhow::Context;
-use rust_decimal::Decimal;
 use sqlx::SqlitePool;
 
 // ── 数据模型 ──────────────────────────────────────────────────────────────────
@@ -11,17 +10,17 @@ pub struct Order {
     pub exchange: String,
     pub symbol: String,
     pub side: String,
-    pub quantity: Decimal,
-    pub price: Decimal,
-    pub price_change: Decimal,
+    pub quantity: f64,
+    pub price: f64,
+    pub price_change: f64,
     pub leverage: i64,
     pub is_auto: i64,               // SQLite uses INTEGER for bool
     pub parent_order_id: Option<i64>,
     pub exchange_order_id: Option<String>,
     /// Cumulative filled quantity (updated from WebSocket fill events)
-    pub filled_quantity: Decimal,
+    pub filled_quantity: f64,
     pub status: String,
-    pub filled_price: Option<Decimal>,
+    pub filled_price: Option<f64>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -33,9 +32,9 @@ pub struct CreateOrder<'a> {
     pub exchange: &'a str,
     pub symbol: &'a str,
     pub side: &'a str,
-    pub quantity: Decimal,
-    pub price: Decimal,
-    pub price_change: Decimal,
+    pub quantity: f64,
+    pub price: f64,
+    pub price_change: f64,
     pub leverage: u32,
     pub is_auto: bool,
     pub parent_order_id: Option<i64>,
@@ -47,9 +46,9 @@ pub struct CreateOrder<'a> {
 /// 标记订单完全成交的参数。
 pub struct UpdateOrderFilled {
     pub id: i64,
-    pub filled_price: Decimal,
+    pub filled_price: f64,
     /// Filled quantity at completion (normally equals order quantity)
-    pub filled_quantity: Decimal,
+    pub filled_quantity: f64,
 }
 
 /// 通用状态更新（取消、失败等）。
@@ -168,6 +167,20 @@ pub async fn list_active_orders_by_exchange(
     Ok(rows)
 }
 
+/// 查询所有孤立的 pending 订单（status='pending' 且 exchange_order_id IS NULL）。
+///
+/// 这些订单在写入 DB 后、提交到交易所前发生崩溃，不会被轮询恢复
+///（轮询只查 open/partially_filled）。启动时应调用此函数并标记为 failed。
+pub async fn list_orphaned_pending_orders(pool: &SqlitePool) -> anyhow::Result<Vec<Order>> {
+    let rows = sqlx::query_as::<_, Order>(
+        "SELECT * FROM orders WHERE status = 'pending' AND exchange_order_id IS NULL",
+    )
+    .fetch_all(pool)
+    .await
+    .context("list_orphaned_pending_orders")?;
+    Ok(rows)
+}
+
 /// 带过滤条件和游标分页的订单列表查询（API 用）。
 ///
 /// 按 `id DESC` 排序；`page.before_id` 为上一页最后一条的 id（不含）。
@@ -237,16 +250,19 @@ pub async fn mark_order_filled(pool: &SqlitePool, p: &UpdateOrderFilled) -> anyh
 /// 将状态从 `open` 升级为 `partially_filled`，并更新 `filled_quantity`。
 /// **竞态保护**：仅当当前状态为 `open` 或 `partially_filled` 时才更新，
 /// 已 `filled`/`cancelled` 的订单不会被覆盖。返回受影响行数。
+///
+/// **单调保护**：使用 `MAX(filled_quantity, ?)` 确保并发 fill 事件乱序执行时，
+/// filled_quantity 只增不减，防止旧值覆盖新值。
 pub async fn update_fill_progress(
     pool: &SqlitePool,
     id: i64,
-    filled_quantity: Decimal,
+    filled_quantity: f64,
 ) -> anyhow::Result<bool> {
     let result = sqlx::query!(
         r#"
         UPDATE orders
         SET status = 'partially_filled',
-            filled_quantity = ?,
+            filled_quantity = MAX(filled_quantity, ?),
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ? AND status IN ('open', 'partially_filled')
         "#,
@@ -270,6 +286,25 @@ pub async fn set_order_status(pool: &SqlitePool, p: &UpdateOrderStatus<'_>) -> a
     .await
     .context("set_order_status")?;
     Ok(())
+}
+
+/// 条件取消订单：仅当当前状态为 `open` 或 `partially_filled` 时才更新为 `cancelled`。
+///
+/// **竞态保护**：防止 cancel 与引擎 fill 竞争时，cancel 的无条件 UPDATE
+/// 覆盖已写入的 `filled` 状态。返回 `true` 表示成功取消，`false` 表示状态已变更。
+pub async fn cancel_order_db(pool: &SqlitePool, id: i64) -> anyhow::Result<bool> {
+    let result = sqlx::query!(
+        r#"
+        UPDATE orders
+        SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND status IN ('open', 'partially_filled')
+        "#,
+        id,
+    )
+    .execute(pool)
+    .await
+    .context("cancel_order_db")?;
+    Ok(result.rows_affected() > 0)
 }
 
 /// 回填交易所分配的订单 ID（下单成功后更新）。

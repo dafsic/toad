@@ -6,20 +6,16 @@ import { useOrders } from '@/hooks/useOrders'
 import { useSSE } from '@/hooks/useSSE'
 import { LoginPage } from '@/pages/LoginPage'
 
-function getCookie(name: string): string | null {
-    const value = `; ${document.cookie}`
-    const parts = value.split(`; ${name}=`)
-    if (parts.length === 2) return parts.pop()?.split(';').shift() ?? null
-    return null
-}
-
 export default function App() {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
 
-    // Check auth status
+    // Check auth status by probing a protected endpoint.
+    // The JWT is stored in an HttpOnly cookie (set by the server), so we cannot
+    // read it from JavaScript. A 200 response means we are authenticated.
     useEffect(() => {
-        const token = getCookie('auth_token')
-        setIsAuthenticated(!!token)
+        fetch('/api/orders?limit=1')
+            .then((r) => setIsAuthenticated(r.ok))
+            .catch(() => setIsAuthenticated(false))
     }, [])
 
     const { state, setFilters, loadMore, updateOrderStatus, onOrderCreated, fetchPage } = useOrders()

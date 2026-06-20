@@ -24,7 +24,7 @@ pub async fn auth_middleware(
         .and_then(|v| v.to_str().ok());
 
     let token = cookie_header
-        .and_then(|s| crate::auth::extract_token_from_cookie(s))
+        .and_then(crate::auth::extract_token_from_cookie)
         .ok_or(StatusCode::UNAUTHORIZED)?;
 
     // 验证 token

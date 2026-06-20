@@ -22,7 +22,7 @@ clap = { version = "4", features = ["derive", "env"] }
 dotenvy = "0.15"
 
 # Database
-sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio", "macros", "migrate", "rust_decimal"] }
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio", "macros", "migrate"] }
 
 # Telegram Bot
 teloxide = { version = "0.13", features = ["macros"] }
@@ -34,8 +34,8 @@ reqwest = { version = "0.13", features = ["json"] }
 tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
 
 # Hyperliquid SDK（使用最新 git 主分支，0.2.x crates.io 版本类型结构已过时）
-hypersdk = { git = "https://github.com/infinitefield/hypersdk" }
-rust_decimal = { version = "1", features = ["maths", "serde"] }
+hypersdk = { git = "https://github.com/infinitefield/hypersdk", rev = "a55f068e" }
+rust_decimal = { version = "1", features = ["maths"] }
 
 # Async trait support
 async-trait = "0.1"

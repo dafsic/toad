@@ -8,13 +8,11 @@ use serde::{Deserialize, Serialize};
 use crate::api::AppState;
 use crate::db::order::{
     CreateOrder, OrderFilter, PageParams, UpdateOrderStatus,
-    delete_order as delete_order_db, get_order, insert_order, list_orders_page,
+    cancel_order_db, delete_order as delete_order_db, get_order, insert_order, list_orders_page,
     set_exchange_order_id, set_order_status,
 };
 use crate::exchange::OrderRequest;
 use crate::sse::SseEvent;
-use rust_decimal::Decimal;
-use rust_decimal::prelude::ToPrimitive;
 
 // ── 请求 / 响应结构体 ─────────────────────────────────────────────────────────
 
@@ -115,31 +113,26 @@ pub async fn create_order(
     if req.side != "buy" && req.side != "sell" {
         return Err(bad_request("side must be 'buy' or 'sell'"));
     }
-    if req.quantity <= 0.0 {
-        return Err(bad_request("quantity must be > 0"));
+    if !req.quantity.is_finite() || req.quantity <= 0.0 {
+        return Err(bad_request("quantity must be a finite number > 0"));
     }
-    if req.price <= 0.0 {
-        return Err(bad_request("price must be > 0"));
+    if !req.price.is_finite() || req.price <= 0.0 {
+        return Err(bad_request("price must be a finite number > 0"));
     }
-    if req.price_change < 0.0 {
-        return Err(bad_request("price_change must be >= 0 (0 = assisted, no reverse leg)"));
+    if !req.price_change.is_finite() || req.price_change < 0.0 {
+        return Err(bad_request("price_change must be finite and >= 0 (0 = assisted, no reverse leg)"));
     }
 
     let leverage = adapter.kind().effective_leverage(req.leverage);
-
-    // Convert to Decimal for internal precision
-    let quantity = Decimal::try_from(req.quantity).unwrap_or(Decimal::ZERO);
-    let price = Decimal::try_from(req.price).unwrap_or(Decimal::ZERO);
-    let price_change = Decimal::try_from(req.price_change).unwrap_or(Decimal::ZERO);
 
     // 1. Write pending first (crash safety)
     let id = insert_order(&state.db, &CreateOrder {
         exchange:          &req.exchange,
         symbol:            crate::exchange::TRADING_SYMBOL,
         side:              &req.side,
-        quantity,
-        price,
-        price_change,
+        quantity:          req.quantity,
+        price:             req.price,
+        price_change:      req.price_change,
         leverage,
         is_auto:           false,
         parent_order_id:   None,
@@ -154,8 +147,8 @@ pub async fn create_order(
         .place_limit_order(&OrderRequest {
             symbol:   crate::exchange::TRADING_SYMBOL.to_string(),
             side:     req.side.clone(),
-            quantity,
-            price,
+            quantity: req.quantity,
+            price:    req.price,
             leverage,
         })
         .await;
@@ -226,6 +219,10 @@ pub async fn list_orders(
 }
 
 /// `DELETE /api/orders/:id` — 取消挂单
+///
+/// 允许取消 `open` 或 `partially_filled` 状态的订单。
+/// 使用条件 UPDATE（`WHERE status IN ('open','partially_filled')`）防止
+/// cancel 与引擎 fill 竞争时覆盖 `filled` 状态。
 pub async fn cancel_order(
     State(state): State<AppState>,
     Path(id): Path<i64>,
@@ -235,9 +232,9 @@ pub async fn cancel_order(
         .map_err(internal)?
         .ok_or((StatusCode::NOT_FOUND, format!("order {id} not found")))?;
 
-    if order.status != "open" {
+    if order.status != "open" && order.status != "partially_filled" {
         return Err(bad_request(&format!(
-            "order {id} is '{}', only 'open' orders can be cancelled",
+            "order {id} is '{}', only 'open' or 'partially_filled' orders can be cancelled",
             order.status
         )));
     }
@@ -262,9 +259,25 @@ pub async fn cancel_order(
         .await
         .map_err(|e| (StatusCode::BAD_GATEWAY, format!("exchange error: {e:#}")))?;
 
-    set_order_status(&state.db, &UpdateOrderStatus { id, status: "cancelled" })
+    // Conditional UPDATE: only cancel if still open/partially_filled.
+    // If the engine already marked it filled, this returns false and we
+    // report the current status instead of clobbering it.
+    let cancelled = cancel_order_db(&state.db, id)
         .await
         .map_err(internal)?;
+
+    if !cancelled {
+        // Race: order was filled between our check and the DB update.
+        // Fetch the current status to report it accurately.
+        let fresh = get_order(&state.db, id)
+            .await
+            .map_err(internal)?
+            .ok_or((StatusCode::NOT_FOUND, format!("order {id} not found")))?;
+        return Err(bad_request(&format!(
+            "order {id} status changed to '{}' during cancel, not cancelled",
+            fresh.status
+        )));
+    }
 
     let _ = state.sse_tx.send(SseEvent::OrderUpdated {
         order_id: id,
@@ -392,16 +405,16 @@ fn order_to_response(o: crate::db::order::Order) -> OrderResponse {
         exchange:          o.exchange,
         symbol:            o.symbol,
         side:              o.side,
-        quantity:          o.quantity.to_f64().unwrap_or(0.0),
-        price:             o.price.to_f64().unwrap_or(0.0),
-        price_change:      o.price_change.to_f64().unwrap_or(0.0),
+        quantity:          o.quantity,
+        price:             o.price,
+        price_change:      o.price_change,
         leverage:          o.leverage,
         is_auto:           o.is_auto != 0,
         parent_order_id:   o.parent_order_id,
         exchange_order_id: o.exchange_order_id,
         status:            o.status,
-        filled_price:      o.filled_price.and_then(|d| d.to_f64()),
-        filled_quantity:   o.filled_quantity.to_f64().unwrap_or(0.0),
+        filled_price:      o.filled_price,
+        filled_quantity:   o.filled_quantity,
         created_at:        o.created_at,
         updated_at:        o.updated_at,
     }

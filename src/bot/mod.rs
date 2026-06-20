@@ -11,11 +11,11 @@ use tokio_util::sync::CancellationToken;
 
 use crate::api::AppState;
 use crate::db::order::{
-    get_order, list_orders_page, set_order_status, OrderFilter, PageParams, UpdateOrderStatus,
+    cancel_order_db, get_order, list_orders_page, set_order_status, OrderFilter, PageParams,
+    UpdateOrderStatus,
 };
 use crate::exchange::ExchangeAdapter;
 use crate::sse::SseEvent;
-use rust_decimal::Decimal;
 
 // ── 命令定义 ──────────────────────────────────────────────────────────────────
 
@@ -95,15 +95,15 @@ async fn handle_order(
         None => return reply(&bot, &msg, "❌ exchange must be kraken / hyperliquid / mexc_spot").await,
     };
 
-    let quantity_f: f64 = match parts[2].parse() {
+    let quantity: f64 = match parts[2].parse() {
         Ok(v) => v,
         Err(_) => return reply(&bot, &msg, "❌ Invalid qty").await,
     };
-    let price_f: f64 = match parts[3].parse() {
+    let price: f64 = match parts[3].parse() {
         Ok(v) => v,
         Err(_) => return reply(&bot, &msg, "❌ Invalid price").await,
     };
-    let price_change_f: f64 = match parts[4].parse() {
+    let price_change: f64 = match parts[4].parse() {
         Ok(v) => v,
         Err(_) => return reply(&bot, &msg, "❌ Invalid price_change").await,
     };
@@ -116,20 +116,19 @@ async fn handle_order(
         1
     };
 
-    // basic validation
+    // basic validation (reject NaN/Infinity + negative/zero)
     if side != "buy" && side != "sell" {
         return reply(&bot, &msg, "❌ side must be buy or sell").await;
     }
-    if quantity_f <= 0.0 || price_f <= 0.0 {
-        return reply(&bot, &msg, "❌ qty/price must be > 0").await;
+    if !quantity.is_finite() || quantity <= 0.0 {
+        return reply(&bot, &msg, "❌ qty must be a finite number > 0").await;
     }
-    if price_change_f < 0.0 {
+    if !price.is_finite() || price <= 0.0 {
+        return reply(&bot, &msg, "❌ price must be a finite number > 0").await;
+    }
+    if !price_change.is_finite() || price_change < 0.0 {
         return reply(&bot, &msg, "❌ price_change cannot be negative (0=assisted, no reverse leg)").await;
     }
-
-    let quantity = rust_decimal::Decimal::try_from(quantity_f).unwrap_or_default();
-    let price = rust_decimal::Decimal::try_from(price_f).unwrap_or_default();
-    let price_change = rust_decimal::Decimal::try_from(price_change_f).unwrap_or_default();
 
     let effective_leverage = adapter.kind().effective_leverage(leverage);
 
@@ -239,7 +238,7 @@ async fn handle_orders(
                 .filled_price
                 .map_or(String::new(), |p| format!(" → {p:.4}"));
             // 部分成交时显示已成交数量
-            let partial = if o.status == "partially_filled" && o.filled_quantity > Decimal::ZERO {
+            let partial = if o.status == "partially_filled" && o.filled_quantity > 0.0 {
                 format!(" ({:.4}/{:.4})", o.filled_quantity, o.quantity)
             } else {
                 String::new()
@@ -294,7 +293,7 @@ async fn handle_cancel(
         Err(e) => return reply(&bot, &msg, &format!("❌ Database error: {e:#}")).await,
     };
 
-    if order.status != "open" {
+    if order.status != "open" && order.status != "partially_filled" {
         return reply(
             &bot,
             &msg,
@@ -315,19 +314,24 @@ async fn handle_cancel(
 
     match adapter.cancel_order(&exchange_oid, &order.symbol).await {
         Ok(()) => {
-            let _ = set_order_status(
-                &state.db,
-                &UpdateOrderStatus {
-                    id,
-                    status: "cancelled",
-                },
-            )
-            .await;
-            let _ = state.sse_tx.send(SseEvent::OrderUpdated {
-                order_id: id,
-                status: "cancelled".into(),
-            });
-            reply(&bot, &msg, &format!("✅ Order <code>{id}</code> cancelled")).await
+            // Conditional UPDATE: only cancel if still open/partially_filled.
+            // Prevents clobbering a fill that the engine detected concurrently.
+            match cancel_order_db(&state.db, id).await {
+                Ok(true) => {
+                    let _ = state.sse_tx.send(SseEvent::OrderUpdated {
+                        order_id: id,
+                        status: "cancelled".into(),
+                    });
+                    reply(&bot, &msg, &format!("✅ Order <code>{id}</code> cancelled")).await
+                }
+                Ok(false) => {
+                    reply(&bot, &msg, &format!("⚠️ Order {id} was filled during cancel, not cancelled")).await
+                }
+                Err(e) => {
+                    tracing::error!("cancel_order_db failed: {e:#}");
+                    reply(&bot, &msg, &format!("❌ Database error after exchange cancel: {e:#}")).await
+                }
+            }
         }
         Err(e) => reply(&bot, &msg, &format!("❌ Exchange cancel failed: {e:#}")).await,
     }
@@ -391,23 +395,23 @@ pub async fn start(state: Arc<AppState>, shutdown_token: CancellationToken) -> a
                 .filter_command::<Command>()
                 .branch(
                     dptree::case![Command::Start]
-                        .endpoint(|bot, msg, state| handle_start(bot, msg, state)),
+                        .endpoint(handle_start),
                 )
                 .branch(
                     dptree::case![Command::Order(args)]
-                        .endpoint(|bot, msg, args, state| handle_order(bot, msg, args, state)),
+                        .endpoint(handle_order),
                 )
                 .branch(
                     dptree::case![Command::Orders(args)]
-                        .endpoint(|bot, msg, args, state| handle_orders(bot, msg, args, state)),
+                        .endpoint(handle_orders),
                 )
                 .branch(
                     dptree::case![Command::Cancel(args)]
-                        .endpoint(|bot, msg, args, state| handle_cancel(bot, msg, args, state)),
+                        .endpoint(handle_cancel),
                 )
                 .branch(
                     dptree::case![Command::Login(args)]
-                        .endpoint(|bot, msg, args, state| handle_login(bot, msg, args, state)),
+                        .endpoint(handle_login),
                 ),
         )
         .branch(

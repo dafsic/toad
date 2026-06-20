@@ -29,6 +29,19 @@ async fn main() -> anyhow::Result<()> {
 
     // 2. 解析配置（clap + .env + 环境变量）
     let config = Arc::new(config::Config::parse());
+
+    // Security check: refuse to start with the default JWT secret in release builds.
+    if config.jwt_secret == "change-me-in-production" {
+        #[cfg(not(debug_assertions))]
+        {
+            panic!("JWT_SECRET is set to the insecure default. Set JWT_SECRET to a long random string before deploying.");
+        }
+        #[cfg(debug_assertions)]
+        {
+            tracing::warn!("JWT_SECRET is set to the insecure default — acceptable in debug builds only");
+        }
+    }
+
     tracing::info!(
         server_addr = %config.server_addr,
         hl_testnet  = config.hyperliquid_testnet,

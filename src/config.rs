@@ -1,9 +1,10 @@
 use clap::Parser;
+use std::fmt;
 
 /// Toad Grid Bot — XMR/USDC 无限链式反向网格交易机器人。
 ///
 /// 所有配置项均可通过环境变量或命令行参数传入，优先级：CLI 参数 > 环境变量 > 默认值。
-#[derive(Debug, Clone, Parser)]
+#[derive(Clone, Parser)]
 #[command(author, version, about)]
 pub struct Config {
     // ── Telegram ────────────────────────────────────────────────────────────
@@ -55,10 +56,33 @@ pub struct Config {
     /// SQLite 数据库 URL
     #[arg(long, env = "DATABASE_URL", default_value = "sqlite:data/bot.db")]
     pub database_url: String,
-    // ── Authentication ──────────────────────────────────────────────────
+
+    // ── Authentication ──────────────────────────────────────────────────────
     /// JWT 签名密钥（建议使用长随机字符串）
     #[arg(long, env = "JWT_SECRET", default_value = "change-me-in-production")]
-    pub jwt_secret: String,}
+    pub jwt_secret: String,
+}
+
+/// Custom Debug impl that redacts all secret fields to prevent accidental
+/// leakage via tracing or panic messages.
+impl fmt::Debug for Config {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Config")
+            .field("telegram_bot_token", &"<redacted>")
+            .field("allowed_telegram_user_id", &self.allowed_telegram_user_id)
+            .field("kraken_api_key", &"<redacted>")
+            .field("kraken_api_secret", &"<redacted>")
+            .field("hyperliquid_private_key", &"<redacted>")
+            .field("hyperliquid_account_address", &self.hyperliquid_account_address)
+            .field("hyperliquid_testnet", &self.hyperliquid_testnet)
+            .field("mexc_api_key", &"<redacted>")
+            .field("mexc_api_secret", &"<redacted>")
+            .field("server_addr", &self.server_addr)
+            .field("database_url", &self.database_url)
+            .field("jwt_secret", &"<redacted>")
+            .finish()
+    }
+}
 
 impl Config {
     /// 从命令行参数和环境变量解析配置。

@@ -7,13 +7,12 @@ use tokio_util::sync::CancellationToken;
 
 use crate::config::Config;
 use crate::db::order::{
-    get_order_by_exchange_id, insert_order, list_active_orders_by_exchange, mark_order_filled,
-    set_exchange_order_id, set_order_status, update_fill_progress, CreateOrder, Order,
-    UpdateOrderFilled, UpdateOrderStatus,
+    get_order_by_exchange_id, insert_order, list_active_orders_by_exchange,
+    list_orphaned_pending_orders, mark_order_filled, set_exchange_order_id, set_order_status,
+    update_fill_progress, CreateOrder, Order, UpdateOrderFilled, UpdateOrderStatus,
 };
 use crate::exchange::{ExchangeAdapter, ExchangeRegistry, FillEvent, OrderRequest};
 use crate::sse::{SseEvent, SseSender};
-use rust_decimal::Decimal;
 
 /// fill channel 容量：允许各交易所各自有一定积压
 const FILL_CHANNEL_CAPACITY: usize = 512;
@@ -104,9 +103,15 @@ impl GridEngine {
         {
             let eng = Arc::clone(&engine);
             let token = shutdown_token.clone();
-            // 固定快照注册表 key 列表（避免轮询时持有锁/迭代被并发修改）
+            // 固定快照注册表 key 列表（避免轮询时迭代被并发修改）
             let exchange_names: Vec<String> = eng.adapters.keys().cloned().collect();
             tokio::spawn(async move {
+                // 启动恢复：将孤立的 pending 订单（写入 DB 后崩溃、未提交到交易所）
+                // 标记为 failed，避免永久孤立。
+                if let Err(e) = eng.recover_pending_orders().await {
+                    tracing::error!("pending order recovery failed: {e:#}");
+                }
+
                 let mut ticker = tokio::time::interval(tokio::time::Duration::from_secs(POLL_INTERVAL_SECS));
                 // interval 首次 tick 立即返回，用于启动时恢复检查
                 loop {
@@ -190,7 +195,8 @@ impl GridEngine {
 
         // 条件更新：仅当 status 为 open 或 partially_filled 时更新
         // 已 filled/cancelled 的订单不会被覆盖（竞态保护）
-        let updated = update_fill_progress(&self.db, order.id, Decimal::try_from(event.filled_quantity).unwrap_or_default())
+        // MAX() 保证并发 fill 事件乱序时 filled_quantity 只增不减
+        let updated = update_fill_progress(&self.db, order.id, event.filled_quantity)
             .await
             .context("update_fill_progress")?;
 
@@ -201,6 +207,47 @@ impl GridEngine {
             });
         }
 
+        Ok(())
+    }
+
+    /// 启动恢复：将孤立的 pending 订单标记为 failed。
+    ///
+    /// `pending` 状态且 `exchange_order_id IS NULL` 的订单是在写入 DB 后、
+    /// 提交到交易所前发生崩溃产生的。轮询只查 `open`/`partially_filled`，
+    /// 这些订单永远不会被自动恢复，因此启动时主动清理。
+    async fn recover_pending_orders(&self) -> anyhow::Result<()> {
+        let orphans = list_orphaned_pending_orders(&self.db).await?;
+        if orphans.is_empty() {
+            return Ok(());
+        }
+        tracing::warn!(count = orphans.len(), "found orphaned pending orders, marking as failed");
+        for order in &orphans {
+            let _ = set_order_status(
+                &self.db,
+                &UpdateOrderStatus {
+                    id: order.id,
+                    status: "failed",
+                },
+            )
+            .await;
+            let _ = self.sse_tx.send(SseEvent::OrderUpdated {
+                order_id: order.id,
+                status: "failed".to_string(),
+            });
+            let notify = format!(
+                "⚠️ <b>Order #{id} marked failed</b>\n\
+                 {exchange} {side} {qty:.4} @ {price:.4}\n\
+                 Reason: pending order with no exchange ID (crash during placement)",
+                id = order.id,
+                exchange = order.exchange,
+                side = order.side,
+                qty = order.quantity,
+                price = order.price,
+            );
+            if let Err(e) = crate::bot::send_notification(&self.config, &notify).await {
+                tracing::warn!("telegram notify (orphan recovery) failed: {e:#}");
+            }
+        }
         Ok(())
     }
 
@@ -368,7 +415,7 @@ impl GridEngine {
 
         // 辅助模式：price_change == 0 表示仅辅助下单，成交后不挂对手单。
         // 仍发送成交通知（去掉「下一口」行），然后提前返回。
-        if order.price_change == Decimal::ZERO {
+        if order.price_change == 0.0 {
             let notify_assisted = format!(
                 "✅ <b>成交</b>  #{id}\n\
                  {exchange} {side}  {qty:.4} @ <b>{price:.4}</b>\n\
@@ -391,7 +438,7 @@ impl GridEngine {
         let reverse_price = if order.side == "buy" {
             order.price + order.price_change
         } else {
-            (order.price - order.price_change).max(Decimal::ZERO)
+            (order.price - order.price_change).max(0.0)
         };
 
         let notify_filled = format!(
@@ -416,7 +463,10 @@ impl GridEngine {
             return Ok(());
         }
 
-        let leverage = order.leverage.max(1) as u32;
+        let adapter = self.adapter(&order.exchange).ok_or_else(|| {
+            anyhow::anyhow!("no adapter registered for exchange '{}'", order.exchange)
+        })?;
+        let leverage = adapter.kind().effective_leverage(order.leverage.max(0) as u32);
 
         // 3. 先在数据库中创建 pending 状态的反向订单（id 优先，便于崩溃恢复）
         let new_id = insert_order(
@@ -443,9 +493,6 @@ impl GridEngine {
             .send(SseEvent::OrderCreated { order_id: new_id });
 
         // 4. 提交到交易所
-        let adapter = self.adapter(&order.exchange).ok_or_else(|| {
-            anyhow::anyhow!("no adapter registered for exchange '{}'", order.exchange)
-        })?;
         let confirmation = adapter
             .place_limit_order(&OrderRequest {
                 symbol: order.symbol.clone(),

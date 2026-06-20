@@ -25,13 +25,6 @@ pub struct LoginRequest {
     pub code: String,
 }
 
-/// SSE /api/auth/wait/{code} 成功响应
-#[derive(Debug, Serialize)]
-struct LoginSuccess {
-    /// JWT token
-    token: String,
-}
-
 /// POST /api/auth/request — 生成验证码
 ///
 /// 前端调用此接口获取 6 位验证码，并展示给用户。
@@ -39,7 +32,7 @@ struct LoginSuccess {
 pub async fn request_login(State(state): State<AppState>) -> Json<LoginRequest> {
     let code = generate_code();
 
-    tracing::info!(code, "generated login code");
+    tracing::debug!(code, "generated login code");
 
     state.auth_store.write().await.insert(
         code.clone(),
@@ -129,7 +122,7 @@ pub async fn complete_login(
     let token = token.ok_or((StatusCode::BAD_REQUEST, "Invalid or expired code".to_string()))?;
 
     let cookie = format!(
-        "auth_token={}; Path=/; HttpOnly; SameSite=Strict; Max-Age=28800; Secure",
+        "auth_token={}; Path=/; HttpOnly; SameSite=Strict; Max-Age=28800",
         token
     );
 

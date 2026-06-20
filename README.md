@@ -190,6 +190,21 @@ Database migrations live in `src/db/migrations/` and run automatically via `sqlx
 
 NOTE: Current migrations use destructive DROP+CREATE (data loss on re-apply). This is accepted for the project. Always back up `data/bot.db` before upgrading or re-running migrations.
 
+### Compile-time database requirement
+
+`sqlx::query!` macros validate SQL at compile time, so a database with the correct schema must exist when running `cargo check` / `cargo build`. If you get `unable to open database file` errors, create it first:
+
+```bash
+mkdir -p data && touch data/bot.db
+DATABASE_URL=sqlite:data/bot.db sqlx migrate run --source src/db/migrations
+```
+
+If migrations were previously applied but a migration file was modified (checksum mismatch), delete the dev database and re-run the command above:
+
+```bash
+rm -f data/bot.db data/bot.db-wal data/bot.db-shm
+```
+
 ---
 
 ## 技术栈

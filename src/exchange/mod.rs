@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use rust_decimal::Decimal;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -17,8 +16,8 @@ pub mod mexc;
 pub struct OrderRequest {
     pub symbol: String,
     pub side: String,       // "buy" | "sell"
-    pub quantity: Decimal,
-    pub price: Decimal,
+    pub quantity: f64,
+    pub price: f64,
     /// Leverage. 1 for spot; user-specified (>=1) for perp. Inherited by reverses.
     pub leverage: u32,
 }

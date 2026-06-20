@@ -10,16 +10,17 @@ export function LoginPage() {
         fetch('/api/auth/request', { method: 'POST' })
             .then((r) => r.json())
             .then((data: { code: string }) => {
-                setCode(data.code)
+                const loginCode = data.code
+                setCode(loginCode)
                 setLoading(false)
 
-                const es = new EventSource(`/api/auth/wait/${data.code}`)
+                const es = new EventSource(`/api/auth/wait/${loginCode}`)
                 es.onmessage = async (e) => {
                     try {
-                        const data = JSON.parse(e.data)
-                        if (data.ready || data.token) {
+                        const msg = JSON.parse(e.data)
+                        if (msg.ready || msg.token) {
                             // Claim the token via server so it is set as HttpOnly cookie (never touches JS)
-                            await fetch(`/api/auth/complete/${code}`, {
+                            await fetch(`/api/auth/complete/${loginCode}`, {
                                 method: 'POST',
                             })
                             window.location.href = '/'
