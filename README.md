@@ -1,8 +1,8 @@
 # 🐸 Toad Grid Bot
 
-XMR/USDC 无限链式反向网格交易机器人。支持 **Kraken 现货**、**MEXC 现货** 和 **Hyperliquid 永续合约**（逐仓模式）。
+XMR/USDC infinite reverse grid trading bot. Supports **Kraken spot**, **MEXC spot**, and **Hyperliquid perpetual** (isolated mode).
 
-用户手动下一笔限价单，成交后系统自动以固定价差挂出反向限价单，持续 ping-pong 振荡，直到手动取消为止。支持同时运行多个独立网格。
+The user places a manual limit order. On fill, the system automatically places the reverse limit order at a fixed price delta, ping-ponging until manually cancelled. Supports running multiple independent grids simultaneously.
 
 ---
 
@@ -68,9 +68,9 @@ DATABASE_URL=sqlite:data/bot.db cargo run
 
 ---
 
-## Web 界面认证
+## Web UI Authentication
 
-首次访问 Web 界面时，系统会显示一个 **6 位验证码**。
+On first visit to the web UI, the system presents a **6-digit code**.
 
 ### 登录流程
 
@@ -90,16 +90,16 @@ DATABASE_URL=sqlite:data/bot.db cargo run
 
 ---
 
-## Telegram Bot 命令
+## Telegram Bot Commands
 
-| 命令 | 说明 |
-|------|------|
-| `/login <code>` | Web 界面登录验证（6 位验证码）|
-| `/order <exchange> <side> <qty> <price> <price_change> [leverage]` | 下单 |
-| `/orders [status]` | 查看订单（status 可选：open/partially_filled/filled/cancelled/failed，默认 open）|
-| `/cancel <id>` | 取消指定挂单 |
+| Command | Description |
+|---------|-------------|
+| `/login <code>` | Web UI login verification (6-digit code) |
+| `/order <exchange> <side> <qty> <price> <price_change> [leverage]` | Place order |
+| `/orders [status]` | List orders (status optional: open/partially_filled/filled/cancelled/failed, default open) |
+| `/cancel <id>` | Cancel the specified order |
 
-**示例：**
+**Examples:**
 ```
 /order kraken buy 2.5 145.80 1.50
 /order hyperliquid sell 1.0 150.00 2.00 5
@@ -118,50 +118,50 @@ sell 成交 →  buy  挂单，价格 = 挂单价格 - price_change
 
 对手单继承相同的 `price_change` 和 `leverage`，形成持续振荡的双向网格。
 
-### 辅助下单模式
+### Assisted Mode
 
-`price_change = 0` 表示**辅助下单**：订单正常提交到交易所、照常跟踪成交，但完全成交后**不自动挂对手单**。适合只需在多平台统一下单、不需要网格振荡的场景。
+`price_change = 0` means **assisted order**: the order is submitted and tracked normally, but no reverse leg is placed after fill. Useful when you only want to place orders across platforms without grid oscillation.
 
-### 订单状态流
+### Order Status Flow
 
 ```
 pending → open → partially_filled → filled | cancelled | failed
 ```
 
-- `pending`：已写入 DB，尚未提交到交易所
-- `open`：交易所已接受挂单
-- `partially_filled`：WebSocket 报告部分成交，`filled_quantity` 实时更新
-- `filled`：轮询确认完全成交，已自动挂出反向对手单
-- `cancelled` / `failed`：终态
+- `pending`: Written to DB, not yet submitted to exchange
+- `open`: Exchange accepted the order
+- `partially_filled`: WebSocket reported partial fill, `filled_quantity` updated in realtime
+- `filled`: Polling confirmed full fill and placed the reverse leg
+- `cancelled` / `failed`: Terminal states
 
-### WebSocket 与轮询的分工
+### WebSocket vs Polling Division of Labor
 
-- **WebSocket**（成交事件）：仅更新 `filled_quantity` 和状态 → `partially_filled`，**不挂对手单**
-- **轮询**（每 60 秒/交易所）：查询最低挂卖单和最高挂买单是否完全成交 → 完全成交则挂对手单
+- **WebSocket** (fill events): only updates `filled_quantity` and status → `partially_filled`, **does not place reverse orders**
+- **Polling** (every 60s per exchange): checks whether the current lowest sell / highest buy are fully filled → places reverse if so
 
-即使 WebSocket 完全不工作，轮询也能保证网格正常运行。
+The grid continues to work even if WebSocket is completely unavailable thanks to polling.
 
 ---
 
-## 轮询与停机恢复
+## Polling & Recovery on Restart
 
-轮询任务持续运行（每 60 秒/交易所），不仅用于停机恢复，也是日常挂对手单的驱动机制。程序重启时，轮询任务的首次 tick 立即执行，**主动检查**所有活跃订单（`open` + `partially_filled`）在停机期间的状态变化：
+The polling task runs continuously (every 60s per exchange). It is used both for restart recovery and as the normal driver for placing reverse legs. On restart the first tick fires immediately and **actively inspects** the status of all active orders (`open` + `partially_filled`) that may have changed while stopped.
 
-### 轮询流程
+### Polling Flow
 
-1. **加载活跃订单** — 从数据库查询所有 `status='open'` 或 `'partially_filled'` 的订单
-2. **筛选候选订单** — 每个交易所筛出最低价卖单和最高价买单
-3. **查询交易所状态** — 调用交易所 API 查询这两个候选订单的最新状态
-4. **状态同步**：
-   - **已成交** → 使用挂单价格触发链式反向下单（保持网格完整性）
-   - **已取消** → 更新数据库并发送 Telegram 通知
-   - **仍挂单** → 等待下一次轮询
+1. **Load active orders** — query all orders with `status='open'` or `'partially_filled'`
+2. **Pick candidates** — for each exchange select the current lowest-price sell and highest-price buy
+3. **Query exchange** — call the exchange status API for those two candidate orders
+4. **Sync state**:
+   - **filled** → trigger reverse using the original order price (preserves grid spacing)
+   - **cancelled** → update DB and send Telegram notification
+   - **still open** → wait for next poll
 
-### 重要说明
+### Important Note
 
-⚠️ **成交价格限制**
+⚠️ **Fill Price Limitation**
 
-由于交易所状态 API 限制，轮询检测到完全成交时无法获取精确成交价格，系统会使用**挂单价格**作为成交价。反向订单价格基于挂单价格 ± `price_change` 计算，保证网格层级间距固定一致，不受实际成交价波动影响。
+Due to exchange status API limitations, when polling detects a full fill it cannot obtain the exact fill price. The system uses the **original order price** as `filled_price`. Reverse orders are priced from `order.price ± price_change`. This guarantees consistent grid spacing independent of actual execution price.
 
 ### 日志示例
 
@@ -186,7 +186,9 @@ cd frontend && npm run dev
 npm run build --prefix frontend && cargo build --release
 ```
 
-数据库迁移文件位于 `src/db/migrations/`，通过 `sqlx::migrate!` 在启动时自动执行。
+Database migrations live in `src/db/migrations/` and run automatically via `sqlx::migrate!` on startup.
+
+NOTE: Current migrations use destructive DROP+CREATE (data loss on re-apply). This is accepted for the project. Always back up `data/bot.db` before upgrading or re-running migrations.
 
 ---
 

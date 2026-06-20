@@ -13,6 +13,7 @@ use crate::db::order::{
 };
 use crate::exchange::{ExchangeAdapter, ExchangeRegistry, FillEvent, OrderRequest};
 use crate::sse::{SseEvent, SseSender};
+use rust_decimal::Decimal;
 
 /// fill channel 容量：允许各交易所各自有一定积压
 const FILL_CHANNEL_CAPACITY: usize = 512;
@@ -189,7 +190,7 @@ impl GridEngine {
 
         // 条件更新：仅当 status 为 open 或 partially_filled 时更新
         // 已 filled/cancelled 的订单不会被覆盖（竞态保护）
-        let updated = update_fill_progress(&self.db, order.id, event.filled_quantity)
+        let updated = update_fill_progress(&self.db, order.id, Decimal::try_from(event.filled_quantity).unwrap_or_default())
             .await
             .context("update_fill_progress")?;
 
@@ -367,7 +368,7 @@ impl GridEngine {
 
         // 辅助模式：price_change == 0 表示仅辅助下单，成交后不挂对手单。
         // 仍发送成交通知（去掉「下一口」行），然后提前返回。
-        if order.price_change == 0.0 {
+        if order.price_change == Decimal::ZERO {
             let notify_assisted = format!(
                 "✅ <b>成交</b>  #{id}\n\
                  {exchange} {side}  {qty:.4} @ <b>{price:.4}</b>\n\
@@ -390,7 +391,7 @@ impl GridEngine {
         let reverse_price = if order.side == "buy" {
             order.price + order.price_change
         } else {
-            (order.price - order.price_change).max(0.0)
+            (order.price - order.price_change).max(Decimal::ZERO)
         };
 
         let notify_filled = format!(
@@ -422,7 +423,7 @@ impl GridEngine {
             &self.db,
             &CreateOrder {
                 exchange: &order.exchange,
-                symbol: &order.symbol,
+                symbol: &order.symbol, // already from parent, which used the constant
                 side: reverse_side,
                 quantity: order.quantity,
                 price: reverse_price,

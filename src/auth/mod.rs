@@ -29,6 +29,8 @@ pub struct AuthSession {
     pub created_at: Instant,
     /// 通知前端的 channel（SSE 使用）
     pub tx: Option<tokio::sync::oneshot::Sender<String>>,
+    /// The generated JWT (set by bot on successful /login). Delivered via server Set-Cookie.
+    pub token: Option<String>,
 }
 
 /// 全局会话存储（验证码 → 会话）

@@ -13,6 +13,8 @@ use crate::db::order::{
 };
 use crate::exchange::OrderRequest;
 use crate::sse::SseEvent;
+use rust_decimal::Decimal;
+use rust_decimal::prelude::ToPrimitive;
 
 // ── 请求 / 响应结构体 ─────────────────────────────────────────────────────────
 
@@ -23,7 +25,7 @@ pub struct CreateOrderRequest {
     pub quantity: f64,
     pub price: f64,
     pub price_change: f64,
-    /// 杠杆倍数。Kraken 现货固定为 1，Hyperliquid ≥1。默认 1。
+    /// Leverage. Spot = 1 (forced), Hyperliquid >=1. Default 1.
     #[serde(default = "default_leverage")]
     pub leverage: u32,
 }
@@ -65,7 +67,7 @@ pub struct OrderResponse {
     pub exchange_order_id: Option<String>,
     pub status: String,
     pub filled_price: Option<f64>,
-    /// 累计已成交数量（由 WebSocket 实时更新）
+    /// Cumulative filled (realtime from WebSocket)
     pub filled_quantity: f64,
     pub created_at: String,
     pub updated_at: String,
@@ -125,14 +127,19 @@ pub async fn create_order(
 
     let leverage = adapter.kind().effective_leverage(req.leverage);
 
-    // 1. 先写 pending 记录（防止崩溃丢单）
+    // Convert to Decimal for internal precision
+    let quantity = Decimal::try_from(req.quantity).unwrap_or(Decimal::ZERO);
+    let price = Decimal::try_from(req.price).unwrap_or(Decimal::ZERO);
+    let price_change = Decimal::try_from(req.price_change).unwrap_or(Decimal::ZERO);
+
+    // 1. Write pending first (crash safety)
     let id = insert_order(&state.db, &CreateOrder {
         exchange:          &req.exchange,
-        symbol:            "XMR/USDC",
+        symbol:            crate::exchange::TRADING_SYMBOL,
         side:              &req.side,
-        quantity:          req.quantity,
-        price:             req.price,
-        price_change:      req.price_change,
+        quantity,
+        price,
+        price_change,
         leverage,
         is_auto:           false,
         parent_order_id:   None,
@@ -142,13 +149,13 @@ pub async fn create_order(
     .await
     .map_err(internal)?;
 
-    // 2. 向交易所提交
+    // 2. Submit to exchange
     let confirmation = adapter
         .place_limit_order(&OrderRequest {
-            symbol:   "XMR/USDC".to_string(),
+            symbol:   crate::exchange::TRADING_SYMBOL.to_string(),
             side:     req.side.clone(),
-            quantity: req.quantity,
-            price:    req.price,
+            quantity,
+            price,
             leverage,
         })
         .await;
@@ -301,7 +308,7 @@ pub async fn delete_order(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// `GET /api/price/:exchange` — 查询交易所 XMR/USDC 最新价格（无需认证）。
+/// `GET /api/price/:exchange` — latest XMR/USDC price for the exchange (public, no auth).
 ///
 /// 在后端代理外部 API 调用，避免浏览器直接访问交易所 API 时的 CORS 限制。
 /// 返回 `{"price": "145.80"}`，价格保留 2 位小数。
@@ -315,15 +322,16 @@ pub async fn get_price(
             struct KrakenTicker {
                 result: serde_json::Value,
             }
+            let pair = crate::exchange::EXCHANGE_SYMBOL;
             let resp: KrakenTicker = client
-                .get("https://api.kraken.com/0/public/Ticker?pair=XMRUSDC")
+                .get(format!("https://api.kraken.com/0/public/Ticker?pair={pair}"))
                 .send()
                 .await
                 .map_err(|e| (StatusCode::BAD_GATEWAY, format!("kraken ticker: {e:#}")))?
                 .json()
                 .await
                 .map_err(|e| (StatusCode::BAD_GATEWAY, format!("kraken parse: {e:#}")))?;
-            let p = resp.result["XMRUSDC"]["c"][0]
+            let p = resp.result[crate::exchange::EXCHANGE_SYMBOL]["c"][0]
                 .as_str()
                 .ok_or((StatusCode::BAD_GATEWAY, "kraken: no price".to_string()))?;
             p.to_string()
@@ -350,7 +358,7 @@ pub async fn get_price(
                 price: String,
             }
             let resp: MexcTicker = client
-                .get("https://api.mexc.com/api/v3/ticker/price?symbol=XMRUSDC")
+                .get(format!("https://api.mexc.com/api/v3/ticker/price?symbol={}", crate::exchange::EXCHANGE_SYMBOL))
                 .send()
                 .await
                 .map_err(|e| (StatusCode::BAD_GATEWAY, format!("mexc ticker: {e:#}")))?
@@ -384,16 +392,16 @@ fn order_to_response(o: crate::db::order::Order) -> OrderResponse {
         exchange:          o.exchange,
         symbol:            o.symbol,
         side:              o.side,
-        quantity:          o.quantity,
-        price:             o.price,
-        price_change:      o.price_change,
+        quantity:          o.quantity.to_f64().unwrap_or(0.0),
+        price:             o.price.to_f64().unwrap_or(0.0),
+        price_change:      o.price_change.to_f64().unwrap_or(0.0),
         leverage:          o.leverage,
         is_auto:           o.is_auto != 0,
         parent_order_id:   o.parent_order_id,
         exchange_order_id: o.exchange_order_id,
         status:            o.status,
-        filled_price:      o.filled_price,
-        filled_quantity:   o.filled_quantity,
+        filled_price:      o.filled_price.and_then(|d| d.to_f64()),
+        filled_quantity:   o.filled_quantity.to_f64().unwrap_or(0.0),
         created_at:        o.created_at,
         updated_at:        o.updated_at,
     }

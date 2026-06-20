@@ -45,7 +45,8 @@ pub fn router(state: AppState) -> Router {
     // 认证路由（无需认证）
     let auth_routes = Router::new()
         .route("/request", post(crate::auth::handlers::request_login))
-        .route("/wait/{code}", get(crate::auth::handlers::wait_login));
+        .route("/wait/{code}", get(crate::auth::handlers::wait_login))
+        .route("/complete/{code}", post(crate::auth::handlers::complete_login));
 
     // API 路由（需要认证）
     let protected_api = Router::new()
@@ -59,7 +60,8 @@ pub fn router(state: AppState) -> Router {
             crate::auth::middleware::auth_middleware,
         ));
 
-    // 开发阶段允许前端 dev server（localhost:5173）跨域访问
+    // Permissive CORS (frontend is embedded; dev server also hits via proxy).
+    // For production behind a reverse proxy you may want to restrict origins.
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::DELETE])
         .allow_headers([header::CONTENT_TYPE, header::COOKIE, header::AUTHORIZATION])

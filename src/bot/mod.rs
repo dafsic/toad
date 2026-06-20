@@ -15,23 +15,24 @@ use crate::db::order::{
 };
 use crate::exchange::ExchangeAdapter;
 use crate::sse::SseEvent;
+use rust_decimal::Decimal;
 
 // ── 命令定义 ──────────────────────────────────────────────────────────────────
 
 #[derive(BotCommands, Clone)]
-#[command(rename_rule = "lowercase", description = "Toad Grid Bot 命令：")]
+#[command(rename_rule = "lowercase", description = "Toad Grid Bot commands:")]
 enum Command {
-    #[command(description = "显示帮助信息")]
+    #[command(description = "Show help")]
     Start,
     #[command(
-        description = "下单  /order <exchange> <side> <qty> <price> <price_change> [leverage]"
+        description = "Place order: /order <exchange> <side> <qty> <price> <price_change> [leverage]"
     )]
     Order(String),
-    #[command(description = "查看当前挂单  /orders [open|filled|cancelled]")]
+    #[command(description = "List orders: /orders [open|filled|cancelled|...]")]
     Orders(String),
-    #[command(description = "取消挂单  /cancel <id>")]
+    #[command(description = "Cancel order: /cancel <id>")]
     Cancel(String),
-    #[command(description = "登录 Web 界面  /login <验证码>")]
+    #[command(description = "Login to web UI: /login <code>")]
     Login(String),
 }
 
@@ -54,7 +55,7 @@ async fn reply(bot: &Bot, msg: &Message, text: &str) -> ResponseResult<()> {
 
 async fn handle_start(bot: Bot, msg: Message, state: Arc<AppState>) -> ResponseResult<()> {
     if sender_id(&msg) != state.config.allowed_telegram_user_id {
-        return reply(&bot, &msg, "⛔ 未授权").await;
+        return reply(&bot, &msg, "⛔ Unauthorized").await;
     }
 
     let help = Command::descriptions()
@@ -72,16 +73,16 @@ async fn handle_order(
     state: Arc<AppState>,
 ) -> ResponseResult<()> {
     if sender_id(&msg) != state.config.allowed_telegram_user_id {
-        return reply(&bot, &msg, "⛔ 未授权").await;
+        return reply(&bot, &msg, "⛔ Unauthorized").await;
     }
 
     let parts: Vec<&str> = args.split_whitespace().collect();
     if parts.len() < 5 {
         return reply(
             &bot, &msg,
-            "用法：<code>/order &lt;exchange&gt; &lt;side&gt; &lt;qty&gt; &lt;price&gt; &lt;price_change&gt; [leverage]</code>\n\
+            "Usage: <code>/order &lt;exchange&gt; &lt;side&gt; &lt;qty&gt; &lt;price&gt; &lt;price_change&gt; [leverage]</code>\n\
              exchange: kraken / hyperliquid / mexc_spot\n\
-             示例：<code>/order kraken buy 2.5 145.80 1.50</code>",
+             Example: <code>/order kraken buy 2.5 145.80 1.50</code>",
         ).await;
     }
 
@@ -91,49 +92,53 @@ async fn handle_order(
     // 适配器查找 + 校验
     let adapter: Arc<dyn ExchangeAdapter> = match state.adapters.get(exchange) {
         Some(a) => Arc::clone(a),
-        None => return reply(&bot, &msg, "❌ exchange 必须为 kraken / hyperliquid / mexc_spot").await,
+        None => return reply(&bot, &msg, "❌ exchange must be kraken / hyperliquid / mexc_spot").await,
     };
 
-    let quantity: f64 = match parts[2].parse() {
+    let quantity_f: f64 = match parts[2].parse() {
         Ok(v) => v,
-        Err(_) => return reply(&bot, &msg, "❌ qty 无效").await,
+        Err(_) => return reply(&bot, &msg, "❌ Invalid qty").await,
     };
-    let price: f64 = match parts[3].parse() {
+    let price_f: f64 = match parts[3].parse() {
         Ok(v) => v,
-        Err(_) => return reply(&bot, &msg, "❌ price 无效").await,
+        Err(_) => return reply(&bot, &msg, "❌ Invalid price").await,
     };
-    let price_change: f64 = match parts[4].parse() {
+    let price_change_f: f64 = match parts[4].parse() {
         Ok(v) => v,
-        Err(_) => return reply(&bot, &msg, "❌ price_change 无效").await,
+        Err(_) => return reply(&bot, &msg, "❌ Invalid price_change").await,
     };
     let leverage: u32 = if parts.len() >= 6 {
         match parts[5].parse() {
             Ok(v) => v,
-            Err(_) => return reply(&bot, &msg, "❌ leverage 无效").await,
+            Err(_) => return reply(&bot, &msg, "❌ Invalid leverage").await,
         }
     } else {
         1
     };
 
-    // 基础校验
+    // basic validation
     if side != "buy" && side != "sell" {
-        return reply(&bot, &msg, "❌ side 必须为 buy 或 sell").await;
+        return reply(&bot, &msg, "❌ side must be buy or sell").await;
     }
-    if quantity <= 0.0 || price <= 0.0 {
-        return reply(&bot, &msg, "❌ qty/price 必须大于 0").await;
+    if quantity_f <= 0.0 || price_f <= 0.0 {
+        return reply(&bot, &msg, "❌ qty/price must be > 0").await;
     }
-    if price_change < 0.0 {
-        return reply(&bot, &msg, "❌ price_change 不能为负（0=辅助下单，不挂对手单）").await;
+    if price_change_f < 0.0 {
+        return reply(&bot, &msg, "❌ price_change cannot be negative (0=assisted, no reverse leg)").await;
     }
+
+    let quantity = rust_decimal::Decimal::try_from(quantity_f).unwrap_or_default();
+    let price = rust_decimal::Decimal::try_from(price_f).unwrap_or_default();
+    let price_change = rust_decimal::Decimal::try_from(price_change_f).unwrap_or_default();
 
     let effective_leverage = adapter.kind().effective_leverage(leverage);
 
-    // 先写 pending 入库
+    // Write pending first
     let db_id = match crate::db::order::insert_order(
         &state.db,
         &crate::db::order::CreateOrder {
             exchange,
-            symbol: "XMR/USDC",
+            symbol: crate::exchange::TRADING_SYMBOL,
             side,
             quantity,
             price,
@@ -148,13 +153,13 @@ async fn handle_order(
     .await
     {
         Ok(id) => id,
-        Err(e) => return reply(&bot, &msg, &format!("❌ 数据库错误：{e:#}")).await,
+        Err(e) => return reply(&bot, &msg, &format!("❌ Database error: {e:#}")).await,
     };
 
-    // 提交交易所（adapter 已在上方校验阶段取到）
+    // Submit to exchange
     match adapter
         .place_limit_order(&crate::exchange::OrderRequest {
-            symbol: "XMR/USDC".to_string(),
+            symbol: crate::exchange::TRADING_SYMBOL.to_string(),
             side: side.to_string(),
             quantity,
             price,
@@ -178,7 +183,7 @@ async fn handle_order(
                 .sse_tx
                 .send(SseEvent::OrderCreated { order_id: db_id });
             reply(&bot, &msg, &format!(
-                "✅ 已下单\nID: <code>{db_id}</code>\n交易所订单: <code>{}</code>\n{exchange} {side} {quantity} @ {price}  Δ{price_change}  ×{effective_leverage}",
+                "✅ Order placed\nID: <code>{db_id}</code>\nExchange order: <code>{}</code>\n{exchange} {side} {quantity} @ {price}  Δ{price_change}  ×{effective_leverage}",
                 conf.exchange_order_id
             )).await
         }
@@ -191,7 +196,7 @@ async fn handle_order(
                 },
             )
             .await;
-            reply(&bot, &msg, &format!("❌ 交易所拒绝：{e:#}")).await
+            reply(&bot, &msg, &format!("❌ Exchange rejected: {e:#}")).await
         }
     }
 }
@@ -204,7 +209,7 @@ async fn handle_orders(
     state: Arc<AppState>,
 ) -> ResponseResult<()> {
     if sender_id(&msg) != state.config.allowed_telegram_user_id {
-        return reply(&bot, &msg, "⛔ 未授权").await;
+        return reply(&bot, &msg, "⛔ Unauthorized").await;
     }
 
     let status_filter = args.split_whitespace().next().unwrap_or("open");
@@ -219,11 +224,11 @@ async fn handle_orders(
 
     let orders = match list_orders_page(&state.db, &filter, &page).await {
         Ok(v) => v,
-        Err(e) => return reply(&bot, &msg, &format!("❌ 查询失败：{e:#}")).await,
+        Err(e) => return reply(&bot, &msg, &format!("❌ Query failed: {e:#}")).await,
     };
 
     if orders.is_empty() {
-        return reply(&bot, &msg, &format!("📭 无 {status_filter} 订单")).await;
+        return reply(&bot, &msg, &format!("📭 No {status_filter} orders")).await;
     }
 
     let lines: Vec<String> = orders
@@ -234,7 +239,7 @@ async fn handle_orders(
                 .filled_price
                 .map_or(String::new(), |p| format!(" → {p:.4}"));
             // 部分成交时显示已成交数量
-            let partial = if o.status == "partially_filled" && o.filled_quantity > 0.0 {
+            let partial = if o.status == "partially_filled" && o.filled_quantity > Decimal::ZERO {
                 format!(" ({:.4}/{:.4})", o.filled_quantity, o.quantity)
             } else {
                 String::new()
@@ -259,7 +264,7 @@ async fn handle_orders(
         &bot,
         &msg,
         &format!(
-            "📋 <b>{status_filter} 订单</b>（最近 {}）\n\n{}",
+            "📋 <b>{status_filter} orders</b> (latest {})\n\n{}",
             orders.len(),
             lines.join("\n")
         ),
@@ -275,37 +280,37 @@ async fn handle_cancel(
     state: Arc<AppState>,
 ) -> ResponseResult<()> {
     if sender_id(&msg) != state.config.allowed_telegram_user_id {
-        return reply(&bot, &msg, "⛔ 未授权").await;
+        return reply(&bot, &msg, "⛔ Unauthorized").await;
     }
 
     let id: i64 = match args.trim().parse() {
         Ok(v) => v,
-        Err(_) => return reply(&bot, &msg, "用法：<code>/cancel &lt;id&gt;</code>").await,
+        Err(_) => return reply(&bot, &msg, "Usage: <code>/cancel &lt;id&gt;</code>").await,
     };
 
     let order = match get_order(&state.db, id).await {
         Ok(Some(o)) => o,
-        Ok(None) => return reply(&bot, &msg, &format!("❌ 订单 {id} 不存在")).await,
-        Err(e) => return reply(&bot, &msg, &format!("❌ 数据库错误：{e:#}")).await,
+        Ok(None) => return reply(&bot, &msg, &format!("❌ Order {id} not found")).await,
+        Err(e) => return reply(&bot, &msg, &format!("❌ Database error: {e:#}")).await,
     };
 
     if order.status != "open" {
         return reply(
             &bot,
             &msg,
-            &format!("❌ 订单 {id} 状态为 '{}'，无法取消", order.status),
+            &format!("❌ Order {id} is '{}', cannot cancel", order.status),
         )
         .await;
     }
 
     let exchange_oid = match order.exchange_order_id.as_deref() {
         Some(s) => s.to_string(),
-        None => return reply(&bot, &msg, "❌ 订单尚无交易所 ID").await,
+        None => return reply(&bot, &msg, "❌ Order has no exchange ID yet").await,
     };
 
     let adapter: Arc<dyn ExchangeAdapter> = match state.adapters.get(&order.exchange) {
         Some(a) => Arc::clone(a),
-        None => return reply(&bot, &msg, &format!("❌ 无 {} 适配器", order.exchange)).await,
+        None => return reply(&bot, &msg, &format!("❌ No adapter for {}", order.exchange)).await,
     };
 
     match adapter.cancel_order(&exchange_oid, &order.symbol).await {
@@ -322,9 +327,9 @@ async fn handle_cancel(
                 order_id: id,
                 status: "cancelled".into(),
             });
-            reply(&bot, &msg, &format!("✅ 订单 <code>{id}</code> 已取消")).await
+            reply(&bot, &msg, &format!("✅ Order <code>{id}</code> cancelled")).await
         }
-        Err(e) => reply(&bot, &msg, &format!("❌ 交易所取消失败：{e:#}")).await,
+        Err(e) => reply(&bot, &msg, &format!("❌ Exchange cancel failed: {e:#}")).await,
     }
 }
 
@@ -337,12 +342,12 @@ async fn handle_login(
 ) -> ResponseResult<()> {
     let user_id = sender_id(&msg);
     if user_id != state.config.allowed_telegram_user_id {
-        return reply(&bot, &msg, "⛔ 未授权用户").await;
+        return reply(&bot, &msg, "⛔ Unauthorized user").await;
     }
 
     let code = args.trim();
     if code.is_empty() {
-        return reply(&bot, &msg, "用法：<code>/login &lt;验证码&gt;</code>").await;
+        return reply(&bot, &msg, "Usage: <code>/login &lt;code&gt;</code>").await;
     }
 
     let mut store = state.auth_store.write().await;
@@ -354,21 +359,22 @@ async fn handle_login(
                 Ok(t) => t,
                 Err(e) => {
                     tracing::error!("generate token failed: {e:#}");
-                    return reply(&bot, &msg, "❌ 生成 token 失败").await;
+                    return reply(&bot, &msg, "❌ Failed to generate token").await;
                 }
             };
 
             session.user_id = Some(user_id);
+            session.token = Some(token.clone());
 
-            // 通知前端 SSE 连接
+            // notify the waiting SSE (send the token internally; it will be stored and a non-secret signal emitted)
             if let Some(tx) = session.tx.take() {
                 let _ = tx.send(token);
             }
 
             tracing::info!(code, user_id, "login successful");
-            reply(&bot, &msg, "✅ 登录成功！现在可以在浏览器中使用 Web 界面。").await
+            reply(&bot, &msg, "✅ Login successful! You can now use the web UI.").await
         }
-        None => reply(&bot, &msg, "❌ 验证码无效或已过期（有效期 5 分钟）").await,
+        None => reply(&bot, &msg, "❌ Invalid or expired code (valid for 5 minutes)").await,
     }
 }
 

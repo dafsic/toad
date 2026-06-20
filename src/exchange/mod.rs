@@ -1,20 +1,25 @@
 use async_trait::async_trait;
+use rust_decimal::Decimal;
 use std::collections::HashMap;
 use std::sync::Arc;
+
+/// Centralized trading pair for this specialized XMR/USDC bot.
+/// (Kept non-configurable per project scope decisions.)
+pub const TRADING_SYMBOL: &str = "XMR/USDC";
+pub const EXCHANGE_SYMBOL: &str = "XMRUSDC"; // format used by Kraken/MEXC tickers & order symbols
 
 pub mod kraken;
 pub mod hyperliquid;
 pub mod mexc;
 
-/// 统一的订单参数，用于向交易所提交限价单。
+/// Unified order params for submitting limit orders to exchanges.
 #[derive(Debug, Clone)]
 pub struct OrderRequest {
     pub symbol: String,
     pub side: String,       // "buy" | "sell"
-    pub quantity: f64,
-    pub price: f64,
-    /// 杠杆倍数。现货固定传 1；永续合约由用户指定，
-    /// 链式反向订单从父订单继承此值。
+    pub quantity: Decimal,
+    pub price: Decimal,
+    /// Leverage. 1 for spot; user-specified (>=1) for perp. Inherited by reverses.
     pub leverage: u32,
 }
 

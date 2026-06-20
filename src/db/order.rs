@@ -1,4 +1,5 @@
 use anyhow::Context;
+use rust_decimal::Decimal;
 use sqlx::SqlitePool;
 
 // ── 数据模型 ──────────────────────────────────────────────────────────────────
@@ -10,17 +11,17 @@ pub struct Order {
     pub exchange: String,
     pub symbol: String,
     pub side: String,
-    pub quantity: f64,
-    pub price: f64,
-    pub price_change: f64,
+    pub quantity: Decimal,
+    pub price: Decimal,
+    pub price_change: Decimal,
     pub leverage: i64,
-    pub is_auto: i64,               // SQLite 用 INTEGER 存 bool
+    pub is_auto: i64,               // SQLite uses INTEGER for bool
     pub parent_order_id: Option<i64>,
     pub exchange_order_id: Option<String>,
-    /// 累计已成交数量（由 WebSocket 成交事件实时更新）
-    pub filled_quantity: f64,
+    /// Cumulative filled quantity (updated from WebSocket fill events)
+    pub filled_quantity: Decimal,
     pub status: String,
-    pub filled_price: Option<f64>,
+    pub filled_price: Option<Decimal>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -32,9 +33,9 @@ pub struct CreateOrder<'a> {
     pub exchange: &'a str,
     pub symbol: &'a str,
     pub side: &'a str,
-    pub quantity: f64,
-    pub price: f64,
-    pub price_change: f64,
+    pub quantity: Decimal,
+    pub price: Decimal,
+    pub price_change: Decimal,
     pub leverage: u32,
     pub is_auto: bool,
     pub parent_order_id: Option<i64>,
@@ -46,9 +47,9 @@ pub struct CreateOrder<'a> {
 /// 标记订单完全成交的参数。
 pub struct UpdateOrderFilled {
     pub id: i64,
-    pub filled_price: f64,
-    /// 完全成交时的已成交数量（通常等于订单总量）
-    pub filled_quantity: f64,
+    pub filled_price: Decimal,
+    /// Filled quantity at completion (normally equals order quantity)
+    pub filled_quantity: Decimal,
 }
 
 /// 通用状态更新（取消、失败等）。
@@ -239,7 +240,7 @@ pub async fn mark_order_filled(pool: &SqlitePool, p: &UpdateOrderFilled) -> anyh
 pub async fn update_fill_progress(
     pool: &SqlitePool,
     id: i64,
-    filled_quantity: f64,
+    filled_quantity: Decimal,
 ) -> anyhow::Result<bool> {
     let result = sqlx::query!(
         r#"

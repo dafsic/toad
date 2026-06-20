@@ -32,7 +32,7 @@ export default function OrderForm({ onCreated }: Props) {
                 price_change: priceChange === '' ? 0 : parseFloat(priceChange),
                 leverage: parseInt(leverage, 10),
             })
-            setSuccess(`订单 #${order.id} 已提交`)
+            setSuccess(`Order #${order.id} submitted`)
             setQuantity('')
             setPrice('')
             setPriceChange('')
@@ -46,13 +46,13 @@ export default function OrderForm({ onCreated }: Props) {
 
     return (
         <div className="rounded-lg border bg-card p-5 space-y-4">
-            <h2 className="font-semibold text-base">下单</h2>
+            <h2 className="font-semibold text-base">Place Order</h2>
 
             <form onSubmit={handleSubmit} className="space-y-3">
                 {/* Exchange + Side */}
                 <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">交易所</label>
+                        <label className="text-xs text-muted-foreground">Exchange</label>
                         <select
                             value={exchange}
                             onChange={e => setExchange(e.target.value as Exchange)}
@@ -64,7 +64,7 @@ export default function OrderForm({ onCreated }: Props) {
                         </select>
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">方向</label>
+                        <label className="text-xs text-muted-foreground">Side</label>
                         <div className="grid grid-cols-2 gap-1">
                             {(['buy', 'sell'] as Side[]).map(s => (
                                 <button
@@ -80,7 +80,7 @@ export default function OrderForm({ onCreated }: Props) {
                                             : 'bg-secondary text-muted-foreground hover:text-foreground',
                                     )}
                                 >
-                                    {s === 'buy' ? '买入' : '卖出'}
+                                    {s === 'buy' ? 'Buy' : 'Sell'}
                                 </button>
                             ))}
                         </div>
@@ -89,17 +89,17 @@ export default function OrderForm({ onCreated }: Props) {
 
                 {/* Price + Quantity */}
                 <div className="grid grid-cols-2 gap-2">
-                    <Field label="价格 (USDC)" value={price} onChange={setPrice} placeholder="145.80" />
-                    <Field label="数量 (XMR)" value={quantity} onChange={setQuantity} placeholder="2.5" />
+                    <Field label="Price (USDC)" value={price} onChange={setPrice} placeholder="145.80" />
+                    <Field label="Qty (XMR)" value={quantity} onChange={setQuantity} placeholder="2.5" />
                 </div>
 
                 {/* Price change + Leverage */}
                 <div className="grid grid-cols-2 gap-2">
-                    <Field label="价差 Δ (0=辅助)" value={priceChange} onChange={setPriceChange} placeholder="1.50" required={false} />
+                    <Field label="Δ Price (0=assisted)" value={priceChange} onChange={setPriceChange} placeholder="1.50" required={false} />
                     <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">
-                            杠杆 ×{leverage}
-                            {SPOT_EXCHANGES.includes(exchange) && <span className="ml-1 opacity-50">(现货固定 1)</span>}
+                            Leverage ×{leverage}
+                            {SPOT_EXCHANGES.includes(exchange) && <span className="ml-1 opacity-50">(spot fixed at 1)</span>}
                         </label>
                         <input
                             type="range"
@@ -128,7 +128,7 @@ export default function OrderForm({ onCreated }: Props) {
                         loading && 'opacity-60 cursor-not-allowed',
                     )}
                 >
-                    {loading ? '提交中…' : side === 'buy' ? '买入下单' : '卖出下单'}
+                    {loading ? 'Submitting…' : side === 'buy' ? 'Place Buy' : 'Place Sell'}
                 </button>
             </form>
         </div>

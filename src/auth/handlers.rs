@@ -6,7 +6,7 @@ use axum::{
     http::StatusCode,
     response::{
         sse::{Event, KeepAlive},
-        Sse,
+        IntoResponse, Sse,
     },
     Json,
 };
@@ -46,7 +46,8 @@ pub async fn request_login(State(state): State<AppState>) -> Json<LoginRequest> 
         AuthSession {
             user_id: None,
             created_at: Instant::now(),
-            tx: None, // 稍后在 wait_login 中填充
+            tx: None, // filled later in wait_login
+            token: None,
         },
     );
 
@@ -80,18 +81,24 @@ pub async fn wait_login(
     // 创建 channel 用于 stream
     let (stream_tx, receiver) = tokio::sync::mpsc::channel(1);
 
-    // 后台任务：等待验证或超时
+    // Background task: wait for bot verification or timeout.
+    // On success we receive the token over the oneshot (internal), store it on the session,
+    // and emit a non-secret "ready" signal. The actual JWT is delivered only via Set-Cookie
+    // on a subsequent /complete call so it never becomes readable by page JavaScript.
     tokio::spawn(async move {
         tokio::select! {
-            // 等待 Bot 验证成功
             result = rx => {
                 if let Ok(token) = result {
-                    let success = LoginSuccess { token };
-                    let data = serde_json::to_string(&success).unwrap_or_default();
-                    let _ = stream_tx.send(Ok(Event::default().data(data))).await;
+                    // Store token in session for the claim step and remove the oneshot sender
+                    {
+                        let mut store = state.auth_store.write().await;
+                        if let Some(sess) = store.get_mut(&code) {
+                            sess.token = Some(token);
+                        }
+                    }
+                    let _ = stream_tx.send(Ok(Event::default().data(r#"{"ready":true}"#))).await;
                 }
             }
-            // 5 分钟超时
             _ = tokio::time::sleep(tokio::time::Duration::from_secs(5 * 60)) => {
                 tracing::debug!(code, "login wait timeout");
             }
@@ -100,4 +107,35 @@ pub async fn wait_login(
 
     let stream = ReceiverStream::new(receiver);
     Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
+}
+
+/// POST /api/auth/complete/:code — Claim the JWT and receive it via HttpOnly cookie.
+///
+/// Called by the frontend after receiving the "ready" signal from /wait.
+/// The token is never exposed to JavaScript; it only travels in the Set-Cookie header.
+/// The session is consumed on success.
+pub async fn complete_login(
+    Path(code): Path<String>,
+    State(state): State<AppState>,
+) -> Result<axum::response::Response, (StatusCode, String)> {
+    let token = {
+        let mut store = state.auth_store.write().await;
+        match store.remove(&code) {
+            Some(session) if session.user_id.is_some() => session.token,
+            _ => None,
+        }
+    };
+
+    let token = token.ok_or((StatusCode::BAD_REQUEST, "Invalid or expired code".to_string()))?;
+
+    let cookie = format!(
+        "auth_token={}; Path=/; HttpOnly; SameSite=Strict; Max-Age=28800; Secure",
+        token
+    );
+
+    let cookie_header: axum::http::HeaderValue = cookie.parse()
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "bad cookie".to_string()))?;
+
+    let resp = (StatusCode::NO_CONTENT, [(axum::http::header::SET_COOKIE, cookie_header)]).into_response();
+    Ok(resp)
 }

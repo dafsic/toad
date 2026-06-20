@@ -189,7 +189,7 @@ impl ExchangeAdapter for MexcSpotAdapter {
                 reqwest::Method::POST,
                 "/api/v3/order",
                 &[
-                    ("symbol", "XMRUSDC".to_string()),
+                    ("symbol", crate::exchange::EXCHANGE_SYMBOL.to_string()),
                     ("side", req.side.to_uppercase()),
                     ("type", "LIMIT".to_string()),
                     ("quantity", format!("{:.8}", req.quantity)),
@@ -223,7 +223,7 @@ impl ExchangeAdapter for MexcSpotAdapter {
                 reqwest::Method::DELETE,
                 "/api/v3/order",
                 &[
-                    ("symbol", "XMRUSDC".to_string()),
+                    ("symbol", crate::exchange::EXCHANGE_SYMBOL.to_string()),
                     ("orderId", exchange_order_id.to_string()),
                 ],
             )
@@ -245,7 +245,7 @@ impl ExchangeAdapter for MexcSpotAdapter {
                 reqwest::Method::GET,
                 "/api/v3/order",
                 &[
-                    ("symbol", "XMRUSDC".to_string()),
+                    ("symbol", crate::exchange::EXCHANGE_SYMBOL.to_string()),
                     ("orderId", exchange_order_id.to_string()),
                 ],
             )

@@ -6,7 +6,7 @@
 --
 -- 状态流：pending → open → partially_filled → filled | cancelled | failed
 --
--- 开发阶段：直接 DROP 旧表重建（无需数据迁移）
+-- NOTE: destructive DROP + CREATE (data loss on re-run). Accepted per project decisions for this OSS release.
 
 DROP TABLE IF EXISTS orders;
 

@@ -7,10 +7,10 @@ interface PriceState {
     error: boolean
 }
 
-/** 轮询获取交易所 XMR/USDC 最新价格，每 15 秒更新一次。
+/** Poll for latest XMR/USDC price from exchange, every 15 seconds.
  *
- * 通过后端代理 `/api/price/:exchange` 获取，避免浏览器直连交易所 API
- * 时的 CORS 限制（MEXC 不发送 CORS 头）。
+ * Uses backend proxy `/api/price/:exchange` to avoid CORS issues when the
+ * browser talks directly to exchange APIs (MEXC does not send CORS headers).
  */
 export function usePrice(exchange: Exchange): PriceState {
     const [state, setState] = useState<PriceState>({ price: null, loading: true, error: false })

@@ -16,7 +16,7 @@ function getCookie(name: string): string | null {
 export default function App() {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
 
-    // 检查认证状态
+    // Check auth status
     useEffect(() => {
         const token = getCookie('auth_token')
         setIsAuthenticated(!!token)
@@ -42,7 +42,7 @@ export default function App() {
 
     useSSE(handleSSECreated, handleSSEUpdated)
 
-    // 检查中
+    // Checking
     if (isAuthenticated === null) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -51,12 +51,12 @@ export default function App() {
         )
     }
 
-    // 未认证，显示登录页
+    // Not authenticated, show login page
     if (!isAuthenticated) {
         return <LoginPage />
     }
 
-    // 已认证，显示主页面
+    // Authenticated, show main page
     return (
         <div className="min-h-screen bg-background font-mono">
             <header className="px-6 py-4 border-b border-border flex items-center justify-between">

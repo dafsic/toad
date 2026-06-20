@@ -14,11 +14,16 @@ export function LoginPage() {
                 setLoading(false)
 
                 const es = new EventSource(`/api/auth/wait/${data.code}`)
-                es.onmessage = (e) => {
+                es.onmessage = async (e) => {
                     try {
-                        const { token } = JSON.parse(e.data)
-                        document.cookie = `auth_token=${token}; path=/; max-age=28800`
-                        window.location.href = '/'
+                        const data = JSON.parse(e.data)
+                        if (data.ready || data.token) {
+                            // Claim the token via server so it is set as HttpOnly cookie (never touches JS)
+                            await fetch(`/api/auth/complete/${code}`, {
+                                method: 'POST',
+                            })
+                            window.location.href = '/'
+                        }
                     } catch {
                         setError('Login failed. Refresh and try again.')
                     } finally {

@@ -2,10 +2,10 @@ export type Exchange = 'kraken' | 'hyperliquid' | 'mexc_spot'
 export type Side = 'buy' | 'sell'
 export type OrderStatus = 'pending' | 'open' | 'partially_filled' | 'filled' | 'cancelled' | 'failed'
 
-/** 现货交易所列表：UI 据此隐藏杠杆滑块（现货杠杆固定为 1） */
+/** Spot exchanges: UI uses this to hide leverage slider (spot leverage is fixed at 1) */
 export const SPOT_EXCHANGES: Exchange[] = ['kraken', 'mexc_spot']
 
-/** 交易所显示名称 */
+/** Display names for exchanges */
 export const EXCHANGE_LABELS: Record<Exchange, string> = {
     kraken: 'Kraken',
     hyperliquid: 'Hyperliquid',
@@ -20,14 +20,14 @@ export interface Order {
     quantity: number
     price: number
     price_change: number
-    /** 杠杆倍数；Kraken 固定为 1，Hyperliquid 永续合约由用户指定 */
+    /** Leverage: Kraken fixed at 1, Hyperliquid perp user-specified */
     leverage: number
     is_auto: boolean
     parent_order_id: number | null
     exchange_order_id: string | null
     status: OrderStatus
     filled_price: number | null
-    /** 累计已成交数量（由 WebSocket 实时更新） */
+    /** Cumulative filled quantity (updated in realtime from WebSocket) */
     filled_quantity: number
     created_at: string
     updated_at: string
@@ -39,7 +39,7 @@ export interface CreateOrderRequest {
     quantity: number
     price: number
     price_change: number
-    /** 杠杆倍数；Kraken 传 1，Hyperliquid 传实际杠杆（≥1）。默认 1。 */
+    /** Leverage: send 1 for Kraken, actual (>=1) for Hyperliquid. Default 1. */
     leverage?: number
 }
 

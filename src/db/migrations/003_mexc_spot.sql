@@ -3,7 +3,7 @@
 -- 在 exchange CHECK 约束中加入 'mexc_spot'。
 -- MEXC 仅接入现货（XMR/USDC 永续合约未上线）。
 --
--- 开发阶段：直接 DROP 旧表重建（与 002 一致，无需数据迁移）
+-- NOTE: destructive DROP + CREATE (data loss on re-run). Accepted per project decisions.
 
 DROP TABLE IF EXISTS orders;
 

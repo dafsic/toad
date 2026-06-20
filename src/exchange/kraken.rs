@@ -195,7 +195,7 @@ impl ExchangeAdapter for KrakenAdapter {
                     "ordertype":   "limit",
                     "type":        req.side,
                     "volume":      format!("{:.8}", req.quantity),
-                    "pair":        "XMRUSDC",
+                    "pair":        crate::exchange::EXCHANGE_SYMBOL,
                     "price":       format!("{:.5}", req.price),
                     "timeinforce": "GTC",
                 }),

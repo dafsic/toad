@@ -19,12 +19,12 @@ export interface PageResponse {
     next_cursor: number | null
 }
 
-/** POST /api/orders — 手动下单 */
+/** POST /api/orders — manual order placement */
 export function createOrder(req: CreateOrderRequest): Promise<Order> {
     return request('/orders', { method: 'POST', body: JSON.stringify(req) })
 }
 
-/** GET /api/orders — 查询订单列表（游标分页） */
+/** GET /api/orders — list orders (cursor pagination) */
 export function listOrders(query?: ListOrdersQuery & { before_id?: number; limit?: number }): Promise<PageResponse> {
     const params = new URLSearchParams()
     if (query) {
@@ -36,7 +36,7 @@ export function listOrders(query?: ListOrdersQuery & { before_id?: number; limit
     return request(`/orders${qs}`)
 }
 
-/** DELETE /api/orders/:id — 取消挂单 */
+/** DELETE /api/orders/:id — cancel open order */
 export async function cancelOrder(id: number): Promise<void> {
     const res = await fetch(`${BASE}/orders/${id}`, { method: 'DELETE' })
     if (!res.ok) {
@@ -45,7 +45,7 @@ export async function cancelOrder(id: number): Promise<void> {
     }
 }
 
-/** DELETE /api/orders/:id/hard — 硬删除终态订单（filled/cancelled/failed） */
+/** DELETE /api/orders/:id/hard — hard delete terminal orders (filled/cancelled/failed) */
 export async function deleteOrder(id: number): Promise<void> {
     const res = await fetch(`${BASE}/orders/${id}/hard`, { method: 'DELETE' })
     if (!res.ok) {

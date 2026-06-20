@@ -106,30 +106,25 @@ impl HyperliquidAdapter {
             .ok_or_else(|| anyhow!("unknown Hyperliquid market: {coin}"))
     }
 
-    /// 将 f64 价格转为 Decimal，并按市场 tick 规则取整（保守模式：
-    /// 买单向下取整，卖单向上取整，确保 maker 挂单不会立刻成交）。
+    /// Price (Decimal) rounded per market tick rules (conservative: bids down, asks up).
     fn round_price(
         &self,
         coin: &str,
-        price: f64,
+        price: Decimal,
         is_buy: bool,
     ) -> anyhow::Result<Decimal> {
         let market = self.market(coin)?;
-        let raw = Decimal::try_from(price)
-            .map_err(|e| anyhow!("invalid price {price}: {e}"))?;
         let side = if is_buy { HlSide::Bid } else { HlSide::Ask };
         market
-            .round_by_side(side, raw, /* conservative */ true)
+            .round_by_side(side, price, /* conservative */ true)
             .ok_or_else(|| anyhow!("cannot round price {price} for {coin}"))
     }
 
-    /// 将 f64 数量转为 Decimal，按市场 sz_decimals 截断。
-    fn round_size(&self, coin: &str, qty: f64) -> anyhow::Result<Decimal> {
+    /// Size rounded/truncated to market sz_decimals.
+    fn round_size(&self, coin: &str, qty: Decimal) -> anyhow::Result<Decimal> {
         let market = self.market(coin)?;
         let sz_decimals = market.sz_decimals.clamp(0, u32::MAX as i64) as u32;
-        Decimal::try_from(qty)
-            .map(|d| d.round_dp(sz_decimals))
-            .map_err(|e| anyhow!("invalid size {qty}: {e}"))
+        Ok(qty.round_dp(sz_decimals))
     }
 
     /// 下单前设置逐仓杠杆。
