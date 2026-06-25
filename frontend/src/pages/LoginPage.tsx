@@ -43,66 +43,62 @@ export function LoginPage() {
     }, [])
 
     return (
-        <div className="min-h-screen bg-background flex flex-col font-mono">
-            {/* Header */}
-            <header className="px-6 py-4 border-b border-border flex items-center">
-                <span className="text-xl">🐸</span>
-                <span className="mx-2 text-border select-none">·</span>
-                <span className="text-sm font-semibold text-xmr">XMR/USDC</span>
-                <span className="ml-2 text-xs text-muted-foreground">GRID BOT</span>
+        <div className="min-h-screen bg-canvas-dark text-on-dark font-sans flex flex-col">
+            {/* nav-bar — matches the main app header */}
+            <header className="h-16 px-6 lg:px-8 border-b border-hairline-dark flex items-center">
+                <span className="text-xl leading-none">🐸</span>
+                <span className="mx-3 text-hairline-dark select-none">·</span>
+                <span className="text-sm font-semibold text-primary font-display tracking-tight">XMR/USDC</span>
+                <span className="ml-2 text-xs text-on-dark-mute">Grid Bot</span>
             </header>
 
-            <div className="flex-1 flex items-center justify-center p-4">
-                <div className="w-full max-w-sm">
-                    {/* Panel */}
-                    <div className="border border-border bg-card rounded-xl overflow-hidden">
-                        <div className="px-5 py-3 border-b border-border bg-secondary flex items-center gap-2">
-                            <span className="h-3 w-3 rounded-full bg-xmr inline-block flex-shrink-0" />
-                            <span className="text-xs font-bold tracking-widest uppercase">
-                                TELEGRAM AUTH
+            <div className="flex-1 flex items-center justify-center p-6">
+                <div className="w-full max-w-md">
+                    {/* feature-card-dark */}
+                    <div className="bg-surface-elevated rounded-lg border border-hairline-dark overflow-hidden">
+                        {/* Card header band — surface-deep tint + hairline divider */}
+                        <div className="px-6 py-4 border-b border-hairline-dark bg-surface-deep flex items-center gap-2.5">
+                            <span className="h-2.5 w-2.5 rounded-full bg-primary inline-block flex-shrink-0" />
+                            <span className="text-sm font-semibold font-display tracking-tight">
+                                Telegram authentication
                             </span>
                         </div>
 
-                        <div className="p-5 space-y-5">
+                        <div className="p-6 space-y-6">
                             {loading && !error && (
-                                <p className="text-xs text-muted-foreground tracking-widest animate-pulse">
-                                    INITIALIZING···
-                                </p>
+                                <p className="text-sm text-on-dark-mute animate-pulse">Initializing…</p>
                             )}
 
                             {error ? (
-                                <p className="text-xs text-red-400">{error}</p>
+                                <p className="text-sm text-accent-danger">{error}</p>
                             ) : code ? (
                                 <>
-                                    <div className="space-y-2">
-                                        <p className="text-xs text-muted-foreground tracking-widest uppercase">
-                                            Send to bot
-                                        </p>
+                                    <div className="space-y-2.5">
+                                        <p className="text-sm text-on-dark-mute">Send to bot</p>
                                         <button
                                             onClick={() => {
                                                 navigator.clipboard.writeText(`/login ${code}`)
                                                 setCopied(true)
                                                 setTimeout(() => setCopied(false), 2000)
                                             }}
-                                            className="w-full flex items-center justify-between rounded-lg border border-border bg-secondary px-4 py-3 text-sm hover:border-xmr transition-colors group"
+                                            // text-input style, clickable
+                                            className="w-full flex items-center justify-between rounded-md border border-hairline-dark bg-canvas-dark px-4 py-3.5 text-base text-on-dark hover:border-primary transition-colors group h-14"
                                         >
-                                            <span className="text-foreground">
-                                                /login <span className="font-bold tracking-widest">{code}</span>
+                                            <span className="font-mono">
+                                                /login <span className="font-semibold tracking-widest">{code}</span>
                                             </span>
-                                            <span className="text-xs text-muted-foreground tracking-widest group-hover:text-xmr transition-colors">
-                                                {copied ? '✓ COPIED' : 'COPY'}
+                                            <span className="text-sm text-on-dark-mute group-hover:text-primary transition-colors">
+                                                {copied ? '✓ Copied' : 'Copy'}
                                             </span>
                                         </button>
                                     </div>
 
                                     <div className="flex items-center gap-2">
-                                        <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
-                                        <span className="text-xs text-muted-foreground tracking-widest uppercase">
-                                            Waiting for verification
-                                        </span>
+                                        <span className="h-2 w-2 rounded-full bg-accent-light-green animate-pulse flex-shrink-0" />
+                                        <span className="text-sm text-on-dark-mute">Waiting for verification</span>
                                     </div>
 
-                                    <p className="text-xs text-muted-foreground/40 tracking-wide">
+                                    <p className="text-xs text-on-dark-mute/60">
                                         Code expires in 5 minutes
                                     </p>
                                 </>

@@ -41,8 +41,8 @@ export default function App() {
     // Checking
     if (isAuthenticated === null) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-muted-foreground">Loading...</div>
+            <div className="min-h-screen flex items-center justify-center bg-canvas-dark font-sans">
+                <div className="text-on-dark-mute text-sm">Loading…</div>
             </div>
         )
     }
@@ -54,32 +54,35 @@ export default function App() {
 
     // Authenticated, show main page
     return (
-        <div className="min-h-screen bg-background font-mono">
-            <header className="px-6 py-4 border-b border-border flex items-center justify-between">
+        <div className="min-h-screen bg-canvas-dark text-on-dark font-sans">
+            {/* nav-bar — 64px, canvas-dark, hairline-dark divider */}
+            <header className="h-16 px-6 lg:px-8 border-b border-hairline-dark flex items-center justify-between sticky top-0 bg-canvas-dark z-10">
                 <div className="flex items-center gap-3">
-                    <span className="text-xl">🐸</span>
-                    <span className="text-border select-none">·</span>
-                    <span className="text-sm font-semibold text-xmr">XMR/USDC</span>
-                    <span className="text-xs text-muted-foreground">GRID BOT</span>
+                    <span className="text-xl leading-none">🐸</span>
+                    <span className="text-hairline-dark select-none">·</span>
+                    <span className="text-sm font-semibold text-primary font-display tracking-tight">XMR/USDC</span>
+                    <span className="text-xs text-on-dark-mute">Grid Bot</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className={`h-2 w-2 rounded-full flex-shrink-0 ${state.error ? 'bg-red-500' : 'bg-green-500'}`} />
-                    <span className="text-xs text-muted-foreground tracking-widest uppercase">
-                        {state.error ? 'OFFLINE' : 'LIVE'}
+                    <span
+                        className={`h-2 w-2 rounded-full flex-shrink-0 ${state.error ? 'bg-accent-danger' : 'bg-accent-light-green'}`}
+                    />
+                    <span className="text-xs text-on-dark-mute uppercase tracking-widest">
+                        {state.error ? 'Offline' : 'Live'}
                     </span>
                 </div>
             </header>
 
-            <main className="p-4 lg:p-6 space-y-4">
-                {/* Exchange panels side by side */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            <main className="p-6 lg:p-8 space-y-6 max-w-[1400px] mx-auto">
+                {/* Exchange panels — 3-up at xl, 2-up at lg, 1-up at mobile */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     <ExchangePanel exchange="kraken" onCreated={onOrderCreated} />
                     <ExchangePanel exchange="hyperliquid" onCreated={onOrderCreated} />
                     <ExchangePanel exchange="mexc_spot" onCreated={onOrderCreated} />
                 </div>
 
                 {/* Order list spanning full width */}
-                <div className="space-y-3">
+                <div className="space-y-4">
                     <OrderFilter filters={state.filters} onChange={setFilters} />
                     <OrderList
                         items={state.items}
@@ -95,4 +98,3 @@ export default function App() {
         </div>
     )
 }
-

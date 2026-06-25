@@ -4,23 +4,40 @@
 
 @layer base {
     :root {
-        --background: 222 47% 8%;
-        --foreground: 210 40% 96%;
-        --card: 222 47% 11%;
-        --border: 217 33% 20%;
-        --primary: 24 89% 55%;
-        --primary-foreground: 222 47% 8%;
-        --secondary: 217 33% 17%;
-        --muted-foreground: 215 20% 55%;
-        --ring: 24 89% 55%;
-        --radius: 0.5rem;
+        --background: 0 0% 0%;
+        --foreground: 0 0% 100%;
+        --card: 240 6% 9%;
+        --border: 0 0% 100%;
+        --border-alpha: 0.12;
+        --primary: 237 86% 59%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 240 6% 9%;
+        --muted-foreground: 0 0% 100%;
+        --muted-alpha: 0.72;
+        --ring: 237 86% 59%;
+        --radius: 20px;
     }
 }
 
 @layer base {
     body {
-        @apply font-mono text-sm;
-        background-color: hsl(222, 47%, 8%);
-        color: hsl(210, 40%, 96%);
+        @apply font-sans;
+        background-color: #000000;
+        color: #ffffff;
+        letter-spacing: 0.24px;
+    }
+}
+
+@layer base {
+    /* Native number-input spinners: hide so the input reads cleanly in the
+       Revolut-style "text-input" treatment. */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input[type="number"] {
+        -moz-appearance: textfield;
+        appearance: textfield;
     }
 }

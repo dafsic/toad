@@ -1,0 +1,1 @@
+{"nodes": [{"id": "rules_client_swr_dedup_swr_automatic_deduplication", "label": "Use SWR for Automatic Deduplication", "file_type": "rationale", "source_file": ".github/skills/react-best-practices/rules/client-swr-dedup.md", "source_location": null, "source_url": "https://swr.vercel.app", "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

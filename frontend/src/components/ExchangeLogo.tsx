@@ -24,8 +24,7 @@ export default function ExchangeLogo({ exchange, size = 20, className = '' }: Pr
             alt={alt}
             width={size}
             height={size}
-            className={`inline-block rounded-sm flex-shrink-0 ${className}`}
-            style={{ imageRendering: 'pixelated' }}
+            className={`inline-block rounded-sm flex-shrink-0 object-contain ${className}`}
         />
     )
 }

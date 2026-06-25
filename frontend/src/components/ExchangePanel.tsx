@@ -50,96 +50,107 @@ export default function ExchangePanel({ exchange, onCreated }: Props) {
     }
 
     return (
-        <div className="border border-border bg-card rounded-xl overflow-hidden flex flex-col">
-            {/* Exchange header */}
-            <div className="px-4 py-3 border-b border-border bg-secondary flex items-center justify-between">
-                <div className="flex items-center gap-2">
+        // feature-card-dark: surface-elevated, rounded-lg (20px), hairline border, no shadow
+        <div className="bg-surface-elevated rounded-lg border border-hairline-dark flex flex-col overflow-hidden">
+            {/* Exchange header — hairline divider, surface-deep tint to lift it off the card */}
+            <div className="px-6 py-4 border-b border-hairline-dark bg-surface-deep flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
                     <ExchangeLogo exchange={exchange} size={24} />
-                    <span className="text-sm font-bold tracking-wide text-foreground">
+                    <span className="text-sm font-semibold text-on-dark font-display tracking-tight">
                         {EXCHANGE_LABELS[exchange]}
                     </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-baseline gap-2">
                     {priceLoading ? (
-                        <span className="text-xs text-muted-foreground animate-pulse tracking-widest">···</span>
+                        <span className="text-xs text-on-dark-mute animate-pulse">···</span>
                     ) : priceError ? (
-                        <span className="text-xs text-muted-foreground">—</span>
+                        <span className="text-xs text-on-dark-mute">—</span>
                     ) : (
-                        <span className="text-sm font-bold font-mono text-xmr">${marketPrice}</span>
+                        <span className="text-base font-semibold font-display text-on-dark tracking-tight">
+                            ${marketPrice}
+                        </span>
                     )}
-                    <span className="text-xs text-muted-foreground">XMR/USDC</span>
+                    <span className="text-xs text-on-dark-mute">XMR/USDC</span>
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
-                {/* Buy / Sell */}
-                <div className="grid grid-cols-2 gap-1 p-1 bg-secondary rounded-lg">
+            <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+                {/* Buy / Sell — pill toggle, rounded-full, semantic green/red */}
+                <div className="grid grid-cols-2 gap-2 p-1.5 bg-surface-deep rounded-full">
                     {(['buy', 'sell'] as Side[]).map(s => (
                         <button
                             key={s}
                             type="button"
                             onClick={() => setSide(s)}
                             className={cn(
-                                'py-2 text-xs font-bold tracking-widest uppercase rounded-md transition-all',
+                                'py-2 text-sm font-semibold rounded-full transition-colors',
                                 side === s
                                     ? s === 'buy'
-                                        ? 'bg-green-600 text-white shadow-sm'
-                                        : 'bg-red-600 text-white shadow-sm'
-                                    : 'text-muted-foreground hover:text-foreground',
+                                        ? 'bg-buy text-white'
+                                        : 'bg-sell text-white'
+                                    : 'text-on-dark-mute hover:text-on-dark',
                             )}
                         >
-                            {s === 'buy' ? 'BUY' : 'SELL'}
+                            {s === 'buy' ? 'Buy' : 'Sell'}
                         </button>
                     ))}
                 </div>
 
-                <Field label="PRICE (USDC)" value={price} onChange={setPrice} placeholder="145.80" />
-                <Field label="QTY (XMR)" value={quantity} onChange={setQuantity} placeholder="2.5" />
-                <Field label="Δ PRICE (0=ASSISTED)" value={priceChange} onChange={setPriceChange} placeholder="1.50" required={false} />
+                <Field label="Price (USDC)" value={price} onChange={setPrice} placeholder="145.80" />
+                <Field label="Quantity (XMR)" value={quantity} onChange={setQuantity} placeholder="2.5" />
+                <Field
+                    label="Δ Price (0 = assisted)"
+                    value={priceChange}
+                    onChange={setPriceChange}
+                    placeholder="1.50"
+                    required={false}
+                />
 
                 {!isSpot && (
-                    <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground tracking-widest uppercase flex justify-between">
-                            <span>LEVERAGE</span>
-                            <span className="text-foreground font-bold">×{leverage}</span>
+                    <div className="space-y-2">
+                        <label className="text-sm text-on-dark-mute flex items-center justify-between">
+                            <span>Leverage</span>
+                            <span className="text-on-dark font-semibold font-display">×{leverage}</span>
                         </label>
                         <input
                             type="range"
                             min={1}
-                            max={50}
+                            max={5}
                             step={1}
                             value={leverage}
                             onChange={e => setLeverage(e.target.value)}
-                            className="w-full accent-xmr"
+                            className="w-full accent-primary"
                         />
                     </div>
                 )}
 
-                {error && <p className="text-xs text-red-400 break-all">{error}</p>}
+                {error && <p className="text-sm text-accent-danger break-all">{error}</p>}
                 {successId !== null && (
-                    <p className="text-xs text-green-400 tracking-wider font-medium">
-                        ✓ ORDER #{successId} SUBMITTED
+                    <p className="text-sm text-accent-light-green font-medium">
+                        ✓ Order #{successId} submitted
                     </p>
                 )}
 
+                {/* Submit — rounded-full pill, semantic buy/sell surface */}
                 <button
                     type="submit"
                     disabled={loading}
                     className={cn(
-                        'w-full rounded-lg py-2.5 text-sm font-bold tracking-widest uppercase transition-all',
+                        'w-full rounded-full py-3.5 text-sm font-semibold transition-colors h-12',
                         side === 'buy'
-                            ? 'bg-green-600 hover:bg-green-500 text-white'
-                            : 'bg-red-600 hover:bg-red-500 text-white',
+                            ? 'bg-buy hover:bg-buy-hover text-white'
+                            : 'bg-sell hover:bg-sell-hover text-white',
                         loading && 'opacity-60 cursor-not-allowed',
                     )}
                 >
-                    {loading ? '···' : side === 'buy' ? 'BUY XMR' : 'SELL XMR'}
+                    {loading ? '···' : side === 'buy' ? 'Buy XMR' : 'Sell XMR'}
                 </button>
             </form>
         </div>
     )
 }
 
+// text-input — 12px radius, 56px height, hairline border, Inter body-md
 function Field({
     label,
     value,
@@ -154,8 +165,8 @@ function Field({
     required?: boolean
 }) {
     return (
-        <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground tracking-widest uppercase">{label}</label>
+        <div className="space-y-2">
+            <label className="text-sm text-on-dark-mute">{label}</label>
             <input
                 type="number"
                 step="any"
@@ -164,7 +175,7 @@ function Field({
                 value={value}
                 onChange={e => onChange(e.target.value)}
                 placeholder={placeholder}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm font-mono outline-none focus:border-xmr focus:ring-1 focus:ring-xmr/20 placeholder:text-muted-foreground/40 transition-colors"
+                className="w-full rounded-md border border-hairline-dark bg-canvas-dark px-4 py-3.5 h-14 text-base text-on-dark font-sans outline-none focus:border-primary focus:ring-2 focus:ring-primary/30 placeholder:text-on-dark-mute/50 transition-colors"
             />
         </div>
     )

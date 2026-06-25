@@ -1,0 +1,1 @@
+{"nodes": [{"id": "rules_rendering_hoist_jsx_hoist_static_jsx", "label": "Hoist Static JSX Elements", "file_type": "rationale", "source_file": ".github/skills/react-best-practices/rules/rendering-hoist-jsx.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

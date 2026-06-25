@@ -17,24 +17,27 @@ const STATUSES: { value: OrderStatus | ''; label: string }[] = [
     { value: 'pending', label: 'Pending' },
 ]
 
+const selectClass =
+    'rounded-md border border-hairline-dark bg-surface-elevated px-3 py-2 text-sm text-on-dark outline-none focus:border-primary focus:ring-2 focus:ring-primary/30 transition-colors appearance-none cursor-pointer'
+
 export default function OrderFilter({ filters, onChange }: Props) {
     function set<K extends keyof OrderFilters>(key: K, value: OrderFilters[K]) {
         onChange({ ...filters, [key]: value })
     }
 
     return (
-        <div className="flex flex-wrap items-center gap-2">
-            {/* Status tabs */}
-            <div className="flex rounded-lg border border-border overflow-hidden bg-muted">
+        <div className="flex flex-wrap items-center gap-3">
+            {/* Status — sub-nav-pill row, rounded-full chips */}
+            <div className="flex flex-wrap gap-2">
                 {STATUSES.map(s => (
                     <button
                         key={s.value}
                         onClick={() => set('status', s.value as OrderStatus | '')}
                         className={cn(
-                            'px-3 py-1.5 text-xs font-medium transition-colors',
+                            'px-4 py-2 text-sm font-semibold rounded-full transition-colors',
                             filters.status === s.value
-                                ? 'bg-xmr text-white'
-                                : 'hover:bg-secondary text-muted-foreground hover:text-foreground',
+                                ? 'bg-on-dark text-canvas-dark'
+                                : 'bg-surface-elevated text-on-dark-mute hover:text-on-dark border border-hairline-dark',
                         )}
                     >
                         {s.label}
@@ -46,7 +49,7 @@ export default function OrderFilter({ filters, onChange }: Props) {
             <select
                 value={filters.exchange}
                 onChange={e => set('exchange', e.target.value as Exchange | '')}
-                className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-xmr focus:ring-1 focus:ring-xmr/20 text-foreground"
+                className={selectClass}
             >
                 <option value="">All exchanges</option>
                 <option value="kraken">Kraken</option>
@@ -58,9 +61,9 @@ export default function OrderFilter({ filters, onChange }: Props) {
             <select
                 value={filters.side}
                 onChange={e => set('side', e.target.value as Side | '')}
-                className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-xmr focus:ring-1 focus:ring-xmr/20 text-foreground"
+                className={selectClass}
             >
-                <option value="">Buy/Sell</option>
+                <option value="">Buy / Sell</option>
                 <option value="buy">Buy</option>
                 <option value="sell">Sell</option>
             </select>
@@ -69,9 +72,9 @@ export default function OrderFilter({ filters, onChange }: Props) {
             <select
                 value={filters.is_auto === undefined ? '' : String(filters.is_auto)}
                 onChange={e => set('is_auto', e.target.value === '' ? undefined : e.target.value === 'true')}
-                className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-xmr focus:ring-1 focus:ring-xmr/20 text-foreground"
+                className={selectClass}
             >
-                <option value="">Manual+Auto</option>
+                <option value="">Manual + Auto</option>
                 <option value="false">Manual only</option>
                 <option value="true">Auto only 🤖</option>
             </select>
