@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        UPDATE orders\n        SET status = 'partially_filled',\n            filled_quantity = MAX(filled_quantity, ?),\n            updated_at = CURRENT_TIMESTAMP\n        WHERE id = ? AND status IN ('open', 'partially_filled')\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "c890a9d745b6232fae98276bd11cc2aa86700ce83b4167a5b96bda903dd6cc77"
+}

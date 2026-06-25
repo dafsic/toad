@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT INTO orders\n            (exchange, symbol, side, quantity, price, price_change, leverage,\n             is_auto, parent_order_id, exchange_order_id, status)\n        VALUES\n            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 11
+    },
+    "nullable": []
+  },
+  "hash": "e407a53dc92d4c99726a5c232e5a73bc81f2038159528b8b24d1b9d3d516aced"
+}

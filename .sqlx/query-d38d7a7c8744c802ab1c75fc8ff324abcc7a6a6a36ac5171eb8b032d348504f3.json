@@ -1,0 +1,110 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT * FROM orders WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "exchange",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "symbol",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "side",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "quantity",
+        "ordinal": 4,
+        "type_info": "Float"
+      },
+      {
+        "name": "price",
+        "ordinal": 5,
+        "type_info": "Float"
+      },
+      {
+        "name": "price_change",
+        "ordinal": 6,
+        "type_info": "Float"
+      },
+      {
+        "name": "leverage",
+        "ordinal": 7,
+        "type_info": "Integer"
+      },
+      {
+        "name": "is_auto",
+        "ordinal": 8,
+        "type_info": "Integer"
+      },
+      {
+        "name": "parent_order_id",
+        "ordinal": 9,
+        "type_info": "Integer"
+      },
+      {
+        "name": "exchange_order_id",
+        "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "filled_quantity",
+        "ordinal": 11,
+        "type_info": "Float"
+      },
+      {
+        "name": "status",
+        "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "filled_price",
+        "ordinal": 13,
+        "type_info": "Float"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 14,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 15,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "d38d7a7c8744c802ab1c75fc8ff324abcc7a6a6a36ac5171eb8b032d348504f3"
+}

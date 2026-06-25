@@ -1,0 +1,24 @@
+# 构建产物
+target/
+frontend/node_modules/
+frontend/dist/
+
+# 运行时数据
+data/
+
+# 敏感配置
+.env
+
+# 版本控制
+.git/
+.gitignore
+
+# IDE / 系统文件
+.DS_Store
+.vscode/
+.idea/
+
+# CI / 文档
+.github/
+AGENTS.md
+graphify-out/

@@ -1,13 +1,18 @@
-# Graph Report - .  (2026-06-23)
+# Graph Report - toad  (2026-06-25)
 
 ## Corpus Check
-- 170 files · ~91,039 words
+- 143 files · ~90,405 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 813 nodes · 1239 edges · 104 communities (43 shown, 61 thin omitted)
-- Extraction: 85% EXTRACTED · 15% INFERRED · 0% AMBIGUOUS · INFERRED: 181 edges (avg confidence: 0.81)
-- Token cost: 79,070 input · 31,510 output
+- 1355 nodes · 1779 edges · 136 communities (72 shown, 64 thin omitted)
+- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 181 edges (avg confidence: 0.81)
+- Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `5b54947d`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - [[_COMMUNITY_Core Architecture & Exchange Adapters|Core Architecture & Exchange Adapters]]
@@ -111,29 +116,60 @@
 - [[_COMMUNITY_React SVG precision|React SVG precision]]
 - [[_COMMUNITY_React Server Auth|React Server Auth]]
 - [[_COMMUNITY_shadcn CLI|shadcn CLI]]
+- [[_COMMUNITY_Community 104|Community 104]]
+- [[_COMMUNITY_Community 105|Community 105]]
+- [[_COMMUNITY_Community 106|Community 106]]
+- [[_COMMUNITY_Community 107|Community 107]]
+- [[_COMMUNITY_Community 108|Community 108]]
+- [[_COMMUNITY_Community 109|Community 109]]
+- [[_COMMUNITY_Community 110|Community 110]]
+- [[_COMMUNITY_Community 111|Community 111]]
+- [[_COMMUNITY_Community 112|Community 112]]
+- [[_COMMUNITY_Community 113|Community 113]]
+- [[_COMMUNITY_Community 114|Community 114]]
+- [[_COMMUNITY_Community 115|Community 115]]
+- [[_COMMUNITY_Community 116|Community 116]]
+- [[_COMMUNITY_Community 117|Community 117]]
+- [[_COMMUNITY_Community 118|Community 118]]
+- [[_COMMUNITY_Community 119|Community 119]]
+- [[_COMMUNITY_Community 120|Community 120]]
+- [[_COMMUNITY_Community 121|Community 121]]
+- [[_COMMUNITY_Community 122|Community 122]]
+- [[_COMMUNITY_Community 123|Community 123]]
+- [[_COMMUNITY_Community 124|Community 124]]
+- [[_COMMUNITY_Community 125|Community 125]]
+- [[_COMMUNITY_Community 126|Community 126]]
+- [[_COMMUNITY_Community 127|Community 127]]
+- [[_COMMUNITY_Community 128|Community 128]]
+- [[_COMMUNITY_Community 129|Community 129]]
+- [[_COMMUNITY_Community 131|Community 131]]
+- [[_COMMUNITY_Community 132|Community 132]]
+- [[_COMMUNITY_Community 133|Community 133]]
+- [[_COMMUNITY_Community 134|Community 134]]
+- [[_COMMUNITY_Community 135|Community 135]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `TailwindConfigGenerator` - 54 edges
 2. `TestTailwindConfigGenerator` - 35 edges
 3. `ShadcnInstaller` - 32 edges
 4. `TestShadcnInstaller` - 26 edges
-5. `HyperliquidAdapter` - 22 edges
-6. `SIL Open Font License v1.1` - 22 edges
-7. `compilerOptions` - 17 edges
-8. `create_order()` - 16 edges
-9. `KrakenAdapter` - 16 edges
-10. `Toad Grid Bot` - 16 edges
+5. `React Best Practices` - 23 edges
+6. `HyperliquidAdapter` - 22 edges
+7. `SIL Open Font License v1.1` - 22 edges
+8. `compilerOptions` - 17 edges
+9. `UI Styling Skill` - 17 edges
+10. `create_order()` - 16 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Toad Grid Bot (CLAUDE.md)` --semantically_similar_to--> `Toad Grid Bot`  [INFERRED] [semantically similar]
   CLAUDE.md → AGENTS.md
 - `Inter Font` --semantically_similar_to--> `Work Sans Font`  [INFERRED] [semantically similar]
   DESIGN.md → .github/skills/ckmui-styling/canvas-fonts/WorkSans-OFL.txt
-- `Revolut Design System` --semantically_similar_to--> `Canvas Design System Reference`  [INFERRED] [semantically similar]
-  DESIGN.md → .github/skills/ckmui-styling/references/canvas-design-system.md
 - `SSE Broadcast` --semantically_similar_to--> `Server-Sent Events (Toad)`  [INFERRED] [semantically similar]
   AGENTS.md → README.md
 - `Kraken Spot Exchange` --semantically_similar_to--> `Kraken Adapter`  [INFERRED] [semantically similar]
+  README.md → AGENTS.md
+- `MEXC Spot Exchange` --semantically_similar_to--> `MEXC Adapter`  [INFERRED] [semantically similar]
   README.md → AGENTS.md
 
 ## Import Cycles
@@ -171,11 +207,11 @@
 - **Toad backend REST API endpoint set** — backend_api_place_order, backend_api_list_orders, backend_api_cancel_order, backend_api_sse_events [EXTRACTED 0.95]
 - **Polling-driven fill detection and reverse order flow** — docs_refactor_poll_exchange, docs_refactor_handle_filled_order, docs_refactor_handle_fill, docs_refactor_update_fill_progress, docs_refactor_list_active_orders [EXTRACTED 0.85]
 
-## Communities (104 total, 61 thin omitted)
+## Communities (136 total, 64 thin omitted)
 
 ### Community 0 - "Core Architecture & Exchange Adapters"
-Cohesion: 0.05
-Nodes (56): AuthSession, AuthStore, Axum 0.8, CancellationToken (Graceful Shutdown), ExchangeAdapter Trait, ExchangeKind, ExchangeRegistry, GridEngine (+48 more)
+Cohesion: 0.17
+Nodes (15): AuthSession, AuthStore, Axum 0.8, CancellationToken (Graceful Shutdown), ExchangeRegistry, GridEngine, JWT Authentication (HS256, 8h), sqlx::migrate! Auto-migration (+7 more)
 
 ### Community 1 - "Frontend Exchange UI Components"
 Cohesion: 0.08
@@ -230,8 +266,8 @@ Cohesion: 0.14
 Nodes (11): main(), Add custom font families.          Args:             fonts: Dict of font_type: [, Add custom spacing values.          Args:             spacing: Dict of name: val, Add custom breakpoints.          Args:             breakpoints: Dict of name: wi, Add plugin requirements.          Args:             plugins: List of plugin name, Get plugin recommendations based on configuration.          Returns:, Generate Tailwind CSS configuration files., Validate configuration.          Returns:             Tuple of (valid, message) (+3 more)
 
 ### Community 14 - "Canvas Font Collection (S-Y) + Brand"
-Cohesion: 0.13
-Nodes (18): SIL Open Font License 1.1, Silkscreen Font, Smooch Sans Font, Tektur Font, Work Sans Font, Young Serif Font, Aeonik Pro Font, Cobalt Violet Brand Color (#494fdf) (+10 more)
+Cohesion: 0.05
+Nodes (47): SIL Open Font License 1.1, Silkscreen Font, Smooch Sans Font, Tektur Font, Work Sans Font, Young Serif Font, Aeonik Pro Font, Cobalt Violet Brand Color (#494fdf) (+39 more)
 
 ### Community 15 - "shadcn/ui Config"
 Cohesion: 0.12
@@ -242,7 +278,7 @@ Cohesion: 0.12
 Nodes (9): Tests for shadcn_add.py, Test adding components with overwrite flag., Test successful component addition., Test ShadcnInstaller class., Test component addition when npx is not found., Create temporary project structure., Test successful addition of all components., Test checking for non-existent shadcn config. (+1 more)
 
 ### Community 17 - "React Rerender Optimization Rules"
-Cohesion: 0.15
+Cohesion: 0.08
 Nodes (14): Defer State Reads to Usage Point, Narrow Effect Dependencies, Calculate Derived State During Rendering, Subscribe to Derived State, Use Functional setState Updates, Use Lazy State Initialization, Extract to Memoized Components, React Compiler (+6 more)
 
 ### Community 18 - "shadcn Add Installer"
@@ -262,8 +298,8 @@ Cohesion: 0.20
 Nodes (6): Generate configuration file content.          Returns:             Configuration, Generate TypeScript configuration., Generate JavaScript configuration., Format plugins array for config., Add indentation to JSON string., Write configuration to file.          Returns:             Tuple of (success, me
 
 ### Community 22 - "REST API Endpoints & SSE Events"
-Cohesion: 0.20
-Nodes (11): DELETE /api/orders/:id Endpoint, GET /api/orders Cursor Pagination Endpoint, order_created SSE Event, Order Object Data Type, Order Status Flow, order_updated SSE Event, POST /api/orders Endpoint, GET /api/sse Event Stream (+3 more)
+Cohesion: 0.08
+Nodes (24): DELETE /api/orders/:id Endpoint, GET /api/orders Cursor Pagination Endpoint, order_created SSE Event, Order Object Data Type, order_updated SSE Event, POST /api/orders Endpoint, Base URL, Cancel Order (+16 more)
 
 ### Community 23 - "Tailwind Config Initialization"
 Cohesion: 0.22
@@ -274,7 +310,7 @@ Cohesion: 0.22
 Nodes (9): auth_middleware(), Body, Next, Request, AppState, Response, Result, State (+1 more)
 
 ### Community 25 - "React Advanced Patterns Rules"
-Cohesion: 0.27
+Cohesion: 0.13
 Nodes (10): Advanced Patterns (advanced section), Client-Side Data Fetching (client section), Do Not Put Effect Events in Dependency Arrays, Store Event Handlers in Refs, Initialize App Once, Not Per Mount, useEffectEvent for Stable Callback Refs, Deduplicate Global Event Listeners, Version and Minimize localStorage Data (+2 more)
 
 ### Community 26 - "API Router Setup"
@@ -282,8 +318,8 @@ Cohesion: 0.42
 Nodes (8): AppState, router(), Arc, AuthStore, Config, ExchangeRegistry, SqlitePool, SseSender
 
 ### Community 27 - "Frontend Design Principles"
-Cohesion: 0.22
-Nodes (9): AI-Generated Design Default Clusters, Apache 2.0 License, Hero as Thesis Principle, Deliberate Motion Principle, Restraint and Self-Critique Principle, frontend-design Skill, Structure Is Information Principle, Typography Carries Personality Principle (+1 more)
+Cohesion: 0.13
+Nodes (14): AI-Generated Design Default Clusters, Apache 2.0 License, Hero as Thesis Principle, Deliberate Motion Principle, Restraint and Self-Critique Principle, Design principles, Frontend Design, Ground it in the subject (+6 more)
 
 ### Community 28 - "Static Asset Serving"
 Cohesion: 0.29
@@ -294,23 +330,23 @@ Cohesion: 0.29
 Nodes (7): handle_fill() Refactored Function, handle_filled_order(order) Function, list_active_orders / list_active_orders_by_exchange, poll_exchange(exchange) Function, Grid Works Without WebSocket (Polling Resilience), Race Condition Protection via Conditional Updates, update_fill_progress(id, filled_quantity) Function
 
 ### Community 30 - "React Bundle Optimization Rules"
-Cohesion: 0.43
-Nodes (7): Bundle Size Optimization (bundle section), Prefer Statically Analyzable Paths, Avoid Barrel File Imports, Conditional Module Loading, Defer Non-Critical Third-Party Libraries, Dynamic Imports for Heavy Components, Preload Based on User Intent
+Cohesion: 0.16
+Nodes (9): Bundle Size Optimization (bundle section), File-System Paths, Import Paths, Prefer Statically Analyzable Paths, Avoid Barrel File Imports, Conditional Module Loading, Defer Non-Critical Third-Party Libraries, Dynamic Imports for Heavy Components (+1 more)
 
 ### Community 31 - "React Async Waterfall Rules"
-Cohesion: 0.48
-Nodes (7): Eliminating Waterfalls (async section), Prevent Waterfall Chains in API Routes, Check Cheap Conditions Before Async Flags, Defer Await Until Needed, Dependency-Based Parallelization (better-all), Promise.all() for Independent Operations, Strategic Suspense Boundaries
+Cohesion: 0.22
+Nodes (7): Eliminating Waterfalls (async section), Prevent Waterfall Chains in API Routes, Check Cheap Conditions Before Async Flags, Defer Await Until Needed, Dependency-Based Parallelization, Promise.all() for Independent Operations, Strategic Suspense Boundaries
 
 ### Community 32 - "React Rendering Perf Rules"
-Cohesion: 0.29
+Cohesion: 0.14
 Nodes (7): Avoid Layout Thrashing, Hoist RegExp Creation, Use Activity Component for Show/Hide, Animate SVG Wrapper Instead of SVG Element, Use Explicit Conditional Rendering, CSS content-visibility for Long Lists, Hoist Static JSX Elements
 
 ### Community 33 - "React JS Performance Rules"
-Cohesion: 0.40
+Cohesion: 0.18
 Nodes (6): Combine Multiple Array Iterations, Early Return from Functions, Use flatMap to Map and Filter in One Pass, Early Length Check for Array Comparisons, Use Loop for Min/Max Instead of Sort, Use toSorted() Instead of sort() for Immutability
 
 ### Community 34 - "React Caching Patterns Rules"
-Cohesion: 0.50
+Cohesion: 0.22
 Nodes (5): Cache Repeated Function Calls, Cache Property Access in Loops, Cache Storage API Calls, Build Index Maps for Repeated Lookups, Use Set/Map for O(1) Lookups
 
 ### Community 35 - "agents-md Skill"
@@ -326,36 +362,148 @@ Cohesion: 1.00
 Nodes (3): Kraken Logo Image, Kraken Brand Identity / Visual Mark, Kraken Cryptocurrency Exchange (Spot)
 
 ### Community 39 - "React Transitions Rules"
-Cohesion: 1.00
-Nodes (3): Use useTransition Over Manual Loading States, Use Transitions for Non-Urgent Updates, Use useDeferredValue for Expensive Derived Renders
+Cohesion: 0.05
+Nodes (43): Arbitrary Values, Aspect Ratio, Background Colors, Border Color, Border Radius, Border Style, Border Width, Borders (+35 more)
 
 ### Community 40 - "React Server Cache Rules"
-Cohesion: 1.00
+Cohesion: 0.40
 Nodes (3): Use after() for Non-Blocking Operations, Cross-Request LRU Caching, Per-Request Deduplication with React.cache()
+
+### Community 45 - "React Hydration Rules"
+Cohesion: 0.05
+Nodes (36): Border Radius Scale, Brand & Accent, Breakpoints, Buttons, Cards & Containers, Collapsing Strategy, Colors, Components (+28 more)
+
+### Community 90 - "backend-api Skill"
+Cohesion: 0.06
+Nodes (32): Accordion, Alert, Alert Dialog, Avatar, Badge, Button, Card, Checkbox (+24 more)
+
+### Community 91 - "Refactor Plan"
+Cohesion: 0.10
+Nodes (20): 10. `README.md` + `AGENTS.md`, 1. `src/db/migrations/002_partial_fill.sql`（新增）, 2. `src/db/order.rs`, 3. `src/exchange/mod.rs`, 4. `src/exchange/kraken.rs`, 5. `src/exchange/hyperliquid.rs`, 6. `src/engine/mod.rs`（核心重构）, 7. `src/api/handlers.rs` (+12 more)
+
+### Community 100 - "React Script defer/async"
+Cohesion: 0.06
+Nodes (31): 1. Mobile-First Design, 2. Consistent Breakpoint Usage, 3. Test at Breakpoint Boundaries, 4. Use Container for Content Width, 5. Progressive Enhancement, 6. Avoid Too Many Breakpoints, Best Practices, Breakpoint System (+23 more)
+
+### Community 102 - "React Server Auth"
+Cohesion: 0.07
+Nodes (28): Accordion, Alert, ARIA Labels, Checkbox and Radio, Color Contrast, Command Palette Navigation, Component-Specific Patterns, Dialog/Modal Navigation (+20 more)
+
+### Community 104 - "Community 104"
+Cohesion: 0.08
+Nodes (24): Accessibility Patterns, Alternative: Tailwind-Only Setup, Best Practices, Common Patterns, Component Layer: shadcn/ui, Component Library Guide, Component + Styling Setup, Core Stack (+16 more)
+
+### Community 105 - "Community 105"
+Cohesion: 0.08
+Nodes (23): Assisted Mode, Compile-time database requirement, Important Note, License, Order Status Flow, Polling Flow, Polling & Recovery on Restart, Telegram Bot Commands (+15 more)
+
+### Community 106 - "Community 106"
+Cohesion: 0.10
+Nodes (21): @apply Directive, Best Practices, Color Customization, Complete Tailwind Config, Configuration Examples, Content Configuration, Custom Color Palette, Custom Font Sizes (+13 more)
+
+### Community 107 - "Community 107"
+Cohesion: 0.11
+Nodes (19): Base Color Presets, Best Practices, Color Customization, Color Format, Component Customization, CSS Variable System, Customize Styles, Customize Variants (+11 more)
+
+### Community 108 - "Community 108"
+Cohesion: 0.12
+Nodes (16): Agent Instructions — Toad Grid Bot, Authentication, Build Commands, Commit Attribution, Environment Variables, Flow, Graceful Shutdown, graphify (+8 more)
+
+### Community 109 - "Community 109"
+Cohesion: 0.12
+Nodes (16): 5.10 Subscribe to Derived State, 5.11 Use Functional setState Updates, 5.12 Use Lazy State Initialization, 5.13 Use Transitions for Non-Urgent Updates, 5.14 Use useDeferredValue for Expensive Derived Renders, 5.15 Use useRef for Transient Values, 5.1 Calculate Derived State During Rendering, 5.2 Defer State Reads to Usage Point (+8 more)
+
+### Community 110 - "Community 110"
+Cohesion: 0.13
+Nodes (15): 7.10 Hoist RegExp Creation, 7.11 Use flatMap to Map and Filter in One Pass, 7.12 Use Loop for Min/Max Instead of Sort, 7.13 Use Set/Map for O(1) Lookups, 7.14 Use toSorted() Instead of sort() for Immutability, 7.1 Avoid Layout Thrashing, 7.2 Build Index Maps for Repeated Lookups, 7.3 Cache Property Access in Loops (+7 more)
+
+### Community 111 - "Community 111"
+Cohesion: 0.19
+Nodes (12): Abstract, better-all Library, Cross-Request LRU Cache, React Best Practices, React.cache() Per-Request Deduplication, React Compiler, References, SWR Library (+4 more)
+
+### Community 112 - "Community 112"
+Cohesion: 0.17
+Nodes (12): 6.10 Use React DOM Resource Hints, 6.11 Use useTransition Over Manual Loading States, 6.1 Animate SVG Wrapper Instead of SVG Element, 6.2 CSS content-visibility for Long Lists, 6.3 Hoist Static JSX Elements, 6.4 Optimize SVG Precision, 6.5 Prevent Hydration Mismatch Without Flickering, 6.6 Suppress Expected Hydration Mismatches (+4 more)
+
+### Community 113 - "Community 113"
+Cohesion: 0.18
+Nodes (10): 3.10 Use after() for Non-Blocking Operations, 3.1 Authenticate Server Actions Like API Routes, 3.2 Avoid Duplicate Serialization in RSC Props, 3.3 Avoid Shared Module State for Request Data, 3.4 Cross-Request LRU Caching, 3.5 Hoist Static I/O to Module Level, 3.6 Minimize Serialization at RSC Boundaries, 3.7 Parallel Data Fetching with Component Composition (+2 more)
+
+### Community 114 - "Community 114"
+Cohesion: 0.31
+Nodes (7): Apache License 2.0, ckm:ui-styling Skill, Tailwind CSS, @theme Directive, @utility Directive, Container Queries, Mobile-First Responsive Design
+
+### Community 115 - "Community 115"
+Cohesion: 0.20
+Nodes (9): 1. Eliminating Waterfalls (async), 2. Bundle Size Optimization (bundle), 3. Server-Side Performance (server), 4. Client-Side Data Fetching (client), 5. Re-render Optimization (rerender), 6. Rendering Performance (rendering), 7. JavaScript Performance (js), 8. Advanced Patterns (advanced) (+1 more)
+
+### Community 116 - "Community 116"
+Cohesion: 0.25
+Nodes (9): ExchangeAdapter Trait, ExchangeKind, Hyperliquid Adapter, hypersdk, Kraken Adapter, MEXC Adapter, Hyperliquid Perpetual (Isolated), Kraken Spot Exchange (+1 more)
+
+### Community 117 - "Community 117"
+Cohesion: 0.22
+Nodes (9): 1. Eliminating Waterfalls (CRITICAL), 2. Bundle Size Optimization (CRITICAL), 3. Server-Side Performance (HIGH), 4. Client-Side Data Fetching (MEDIUM-HIGH), 5. Re-render Optimization (MEDIUM), 6. Rendering Performance (MEDIUM), 7. JavaScript Performance (LOW-MEDIUM), 8. Advanced Patterns (LOW) (+1 more)
+
+### Community 118 - "Community 118"
+Cohesion: 0.29
+Nodes (7): 1.1 Check Cheap Conditions Before Async Flags, 1.2 Defer Await Until Needed, 1.3 Dependency-Based Parallelization, 1.4 Prevent Waterfall Chains in API Routes, 1.5 Promise.all() for Independent Operations, 1.6 Strategic Suspense Boundaries, 1. Eliminating Waterfalls
+
+### Community 119 - "Community 119"
+Cohesion: 0.29
+Nodes (7): 2.1 Avoid Barrel File Imports, 2.2 Conditional Module Loading, 2.3 Defer Non-Critical Third-Party Libraries, 2.4 Dynamic Imports for Heavy Components, 2.5 Prefer Statically Analyzable Paths, 2.6 Preload Based on User Intent, 2. Bundle Size Optimization
+
+### Community 120 - "Community 120"
+Cohesion: 0.29
+Nodes (6): Rules Directory Structure, Full Compiled Document, How to Use, Rule Categories by Priority, Vercel React Best Practices, When to Apply
+
+### Community 121 - "Community 121"
+Cohesion: 0.43
+Nodes (5): React Hook Form, shadcn/ui, Zod, CSS Variable Theming System, next-themes
+
+### Community 122 - "Community 122"
+Cohesion: 0.33
+Nodes (5): Creating a New Rule, Getting Started, React Best Practices, Rule File Structure, Structure
+
+### Community 123 - "Community 123"
+Cohesion: 0.40
+Nodes (3): Use useTransition Over Manual Loading States, Use Transitions for Non-Urgent Updates, Use useDeferredValue for Expensive Derived Renders
+
+### Community 124 - "Community 124"
+Cohesion: 0.40
+Nodes (5): 4.1 Deduplicate Global Event Listeners, 4.2 Use Passive Event Listeners for Scrolling Performance, 4.3 Use SWR for Automatic Deduplication, 4.4 Version and Minimize localStorage Data, 4. Client-Side Data Fetching
+
+### Community 125 - "Community 125"
+Cohesion: 0.40
+Nodes (5): 8.1 Do Not Put Effect Events in Dependency Arrays, 8.2 Initialize App Once, Not Per Mount, 8.3 Store Event Handlers in Refs, 8.4 useEffectEvent for Stable Callback Refs, 8. Advanced Patterns
+
+### Community 126 - "Community 126"
+Cohesion: 0.83
+Nodes (3): Radix UI Primitives, WAI-ARIA, WCAG
 
 ## Ambiguous Edges - Review These
 - `Kraken Logo Image` → `Kraken Cryptocurrency Exchange (Spot)`  [AMBIGUOUS]
   frontend/public/kraken.png · relation: shares_data_with
 
 ## Knowledge Gaps
-- **197 isolated node(s):** `Path`, `Any`, `$schema`, `style`, `rsc` (+192 more)
+- **572 isolated node(s):** `Path`, `Any`, `$schema`, `plugin`, `@opencode-ai/plugin` (+567 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **61 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **64 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **What is the exact relationship between `Kraken Logo Image` and `Kraken Cryptocurrency Exchange (Spot)`?**
   _Edge tagged AMBIGUOUS (relation: shares_data_with) - confidence is low._
-- **Why does `TailwindConfigGenerator` connect `Tailwind Config Generator` to `Tailwind Config Generator Tests`, `Tailwind Config String Generation`, `Tailwind Config Initialization`, `tailwind test: color palette`, `tailwind test: custom fonts`, `tailwind test: breakpoints`, `tailwind test: plugins no dup`, `tailwind test: plugin recs`, `tailwind test: plugin recs nextjs`, `tailwind test: TS config`, `tailwind test: config colors`, `tailwind test: validate valid`, `tailwind test: validate no content`, `tailwind test: init JS`, `tailwind test: empty theme`, `tailwind test: write invalid path`, `tailwind test: init framework`, `tailwind test: full JS config`, `tailwind test: default output JS`, `tailwind test: custom output`, `tailwind test: base config`, `tailwind test: content paths React`, `tailwind test: content paths Next`, `tailwind test: content paths Vue`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
-- **Why does `HashMap` connect `Hyperliquid Perp Adapter` to `Auth API Handlers`?**
-  _High betweenness centrality (0.005) - this node is a cross-community bridge._
+- **Why does `ckm:ui-styling Skill` connect `Community 114` to `Core Architecture & Exchange Adapters`, `Community 121`, `Community 126`, `Canvas Font Collection (S-Y) + Brand`?**
+  _High betweenness centrality (0.047) - this node is a cross-community bridge._
+- **Why does `Toad Grid Bot` connect `Core Architecture & Exchange Adapters` to `Community 121`, `Community 114`, `Community 116`, `Community 111`?**
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+- **Why does `React Best Practices` connect `Community 111` to `Core Architecture & Exchange Adapters`, `Community 109`, `Community 110`, `Community 112`, `Community 113`, `Community 118`, `Community 119`, `Community 120`, `Community 124`, `Community 125`?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
 - **Are the 33 inferred relationships involving `TailwindConfigGenerator` (e.g. with `TestTailwindConfigGenerator` and `.test_add_breakpoints()`) actually correct?**
   _`TailwindConfigGenerator` has 33 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 23 inferred relationships involving `ShadcnInstaller` (e.g. with `TestShadcnInstaller` and `.test_add_all_components_dry_run()`) actually correct?**
   _`ShadcnInstaller` has 23 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Path`, `Handle shadcn/ui component installation.`, `Initialize installer.          Args:             project_root: Project root dire` to the rest of the system?**
-  _331 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Core Architecture & Exchange Adapters` be split into smaller, more focused modules?**
-  _Cohesion score 0.0512987012987013 - nodes in this community are weakly interconnected._
+  _675 weakly-connected nodes found - possible documentation gaps or missing edges._
