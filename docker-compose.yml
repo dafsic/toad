@@ -1,7 +1,11 @@
+# CI (`.github/workflows/docker-publish.yml`) 构建并推送镜像到 DockerHub: ${DOCKER_USERNAME}/toad
+#
+# 拉取已发布镜像: 在 .env 中设置 DOCKER_USERNAME=<你的DockerHub用户名>
+#   - 默认标签 latest（跟随 main 分支）
+#   - 固定版本: 设置 TOAD_TAG=<semver>，如 0.1.0（对应 git tag v0.1.0）
 services:
   toad:
-    build: .
-    image: toad:latest
+    image: ${DOCKER_USERNAME:-toad}/toad:${TOAD_TAG:-latest}
     restart: unless-stopped
     ports:
       - "3000:3000"
