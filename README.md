@@ -232,9 +232,3 @@ rm -f data/bot.db data/bot.db-wal data/bot.db-shm
 
 ---
 
-## License
-
-MIT
-
-// TODO:
-1. CI自动push镜像
