@@ -9,7 +9,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: 构建 Rust 后端（并嵌入前端产物）
-FROM rust:1.87-alpine AS backend
+FROM rust:1.96-alpine AS backend
 RUN apk add --no-cache musl-dev sqlite-dev
 # sqlx::query! 编译时宏使用离线数据（.sqlx/），无需构建期连接数据库
 ENV SQLX_OFFLINE=true
