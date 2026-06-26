@@ -21,6 +21,20 @@ export const EXCHANGE_LABELS: Record<string, string> = {
     mexc_spot: 'MEXC',
 }
 
+/** The full set of supported exchanges — panels are always rendered for all of
+ *  these; disabled ones (no API credentials on backend) are visually greyed-out. */
+export const ALL_EXCHANGES: ExchangeInfo[] = [
+    { name: 'kraken', kind: 'spot', label: 'Kraken' },
+    { name: 'hyperliquid', kind: 'perp', label: 'Hyperliquid' },
+    { name: 'mexc_spot', kind: 'spot', label: 'MEXC' },
+]
+
+/** Exchange descriptor for panel rendering — includes whether the backend has
+ *  API credentials configured (i.e. whether order placement is available). */
+export interface PanelExchange extends ExchangeInfo {
+    enabled: boolean
+}
+
 export interface Order {
     id: number
     exchange: string

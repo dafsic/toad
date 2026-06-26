@@ -11,10 +11,13 @@ interface Props {
     kind: 'spot' | 'perp'
     /** Display name shown in the header */
     label: string
+    /** Whether the backend has API credentials for this exchange.
+     *  Disabled panels render greyed-out and block order submission. */
+    enabled?: boolean
     onCreated?: () => void
 }
 
-export default function ExchangePanel({ exchange, kind, label, onCreated }: Props) {
+export default function ExchangePanel({ exchange, kind, label, enabled = true, onCreated }: Props) {
     const [side, setSide] = useState<Side>('buy')
     const [quantity, setQuantity] = useState('')
     const [price, setPrice] = useState('')
@@ -55,7 +58,10 @@ export default function ExchangePanel({ exchange, kind, label, onCreated }: Prop
 
     return (
         // feature-card-dark: surface-elevated, rounded-lg (20px), hairline border, no shadow
-        <div className="bg-surface-elevated rounded-lg border border-hairline-dark flex flex-col overflow-hidden">
+        <div className={cn(
+            'bg-surface-elevated rounded-lg border border-hairline-dark flex flex-col overflow-hidden',
+            !enabled && 'opacity-50',
+        )}>
             {/* Exchange header — hairline divider, surface-deep tint to lift it off the card */}
             <div className="px-6 py-4 border-b border-hairline-dark bg-surface-deep flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -63,6 +69,11 @@ export default function ExchangePanel({ exchange, kind, label, onCreated }: Prop
                     <span className="text-sm font-semibold text-on-dark font-display tracking-tight">
                         {label}
                     </span>
+                    {!enabled && (
+                        <span className="text-[10px] uppercase tracking-wider font-semibold text-on-dark-mute border border-hairline-dark rounded px-1.5 py-0.5">
+                            Disabled
+                        </span>
+                    )}
                 </div>
                 <div className="flex items-baseline gap-2">
                     {priceLoading ? (
@@ -70,7 +81,10 @@ export default function ExchangePanel({ exchange, kind, label, onCreated }: Prop
                     ) : priceError ? (
                         <span className="text-xs text-on-dark-mute">—</span>
                     ) : (
-                        <span className="text-base font-semibold font-display text-on-dark tracking-tight">
+                        <span className={cn(
+                            'text-base font-semibold font-display tracking-tight',
+                            enabled ? 'text-on-dark' : 'text-on-dark-mute',
+                        )}>
                             ${marketPrice}
                         </span>
                     )}
@@ -78,7 +92,13 @@ export default function ExchangePanel({ exchange, kind, label, onCreated }: Prop
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+            <form onSubmit={handleSubmit} className={cn('p-6 flex flex-col gap-4', !enabled && 'pointer-events-none')}>
+                {!enabled && (
+                    <p className="text-xs text-on-dark-mute border border-hairline-dark rounded-md px-3 py-2 bg-surface-deep">
+                        请在 <code className="text-on-dark">.env</code> 配置 {label} API 凭据以启用
+                    </p>
+                )}
+
                 {/* Buy / Sell — pill toggle, rounded-full, semantic green/red */}
                 <div className="grid grid-cols-2 gap-2 p-1.5 bg-surface-deep rounded-full">
                     {(['buy', 'sell'] as Side[]).map(s => (
@@ -138,16 +158,18 @@ export default function ExchangePanel({ exchange, kind, label, onCreated }: Prop
                 {/* Submit — rounded-full pill, semantic buy/sell surface */}
                 <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !enabled}
                     className={cn(
                         'w-full rounded-full py-3.5 text-sm font-semibold transition-colors h-12',
-                        side === 'buy'
-                            ? 'bg-buy hover:bg-buy-hover text-white'
-                            : 'bg-sell hover:bg-sell-hover text-white',
+                        !enabled
+                            ? 'bg-surface-deep text-on-dark-mute cursor-not-allowed'
+                            : side === 'buy'
+                                ? 'bg-buy hover:bg-buy-hover text-white'
+                                : 'bg-sell hover:bg-sell-hover text-white',
                         loading && 'opacity-60 cursor-not-allowed',
                     )}
                 >
-                    {loading ? '···' : side === 'buy' ? 'Buy XMR' : 'Sell XMR'}
+                    {!enabled ? '未启用' : loading ? '···' : side === 'buy' ? 'Buy XMR' : 'Sell XMR'}
                 </button>
             </form>
         </div>

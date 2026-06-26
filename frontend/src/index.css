@@ -9,12 +9,12 @@
         --card: 240 6% 9%;
         --border: 0 0% 100%;
         --border-alpha: 0.12;
-        --primary: 237 86% 59%;
+        --primary: 25 100% 50%;
         --primary-foreground: 0 0% 100%;
         --secondary: 240 6% 9%;
         --muted-foreground: 0 0% 100%;
         --muted-alpha: 0.72;
-        --ring: 237 86% 59%;
+        --ring: 25 100% 50%;
         --radius: 20px;
     }
 }

@@ -1,10 +1,10 @@
 import type { OrderFilters } from '@/hooks/useOrders'
-import type { ExchangeInfo, OrderStatus, Side } from '@/types/order'
+import type { OrderStatus, PanelExchange, Side } from '@/types/order'
 import { cn } from '@/lib/utils'
 
 interface Props {
     filters: OrderFilters
-    exchanges: ExchangeInfo[]
+    exchanges: PanelExchange[]
     onChange: (f: OrderFilters) => void
 }
 
@@ -54,7 +54,9 @@ export default function OrderFilter({ filters, exchanges, onChange }: Props) {
             >
                 <option value="">All exchanges</option>
                 {exchanges.map(ex => (
-                    <option key={ex.name} value={ex.name}>{ex.label}</option>
+                    <option key={ex.name} value={ex.name}>
+                        {ex.label}{ex.enabled ? '' : ' (disabled)'}
+                    </option>
                 ))}
             </select>
 

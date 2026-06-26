@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import ExchangePanel from '@/components/ExchangePanel'
 import OrderFilter from '@/components/OrderFilter'
 import OrderList from '@/components/OrderList'
@@ -6,6 +6,7 @@ import { useOrders } from '@/hooks/useOrders'
 import { useSSE } from '@/hooks/useSSE'
 import { useExchanges } from '@/hooks/useExchanges'
 import { LoginPage } from '@/pages/LoginPage'
+import { ALL_EXCHANGES, type PanelExchange } from '@/types/order'
 
 export default function App() {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
@@ -20,7 +21,17 @@ export default function App() {
     }, [])
 
     const { state, setFilters, loadMore, updateOrderStatus, onOrderCreated, fetchPage } = useOrders()
-    const { exchanges } = useExchanges()
+    const { exchanges: enabledExchanges } = useExchanges()
+
+    // Always render all 3 panels; disabled ones are greyed-out. The `enabled`
+    // flag is derived by intersecting ALL_EXCHANGES with the backend's list.
+    const panels: PanelExchange[] = useMemo(() => {
+        const enabledNames = new Set(enabledExchanges.map(e => e.name))
+        return ALL_EXCHANGES.map(ex => ({
+            ...ex,
+            enabled: enabledNames.has(ex.name),
+        }))
+    }, [enabledExchanges])
 
     // Initial load
     useEffect(() => {
@@ -76,30 +87,23 @@ export default function App() {
             </header>
 
             <main className="p-6 lg:p-8 space-y-6 max-w-[1400px] mx-auto">
-                {/* Exchange panels — driven by enabled exchanges from backend */}
-                {exchanges.length > 0 ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {exchanges.map((ex) => (
-                            <ExchangePanel
-                                key={ex.name}
-                                exchange={ex.name}
-                                kind={ex.kind}
-                                label={ex.label}
-                                onCreated={onOrderCreated}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="bg-surface-elevated rounded-lg border border-hairline-dark p-8 text-center">
-                        <p className="text-sm text-on-dark-mute">
-                            No exchanges enabled. Set API credentials (e.g. <code className="text-on-dark">KRAKEN_API_KEY</code> / <code className="text-on-dark">KRAKEN_API_SECRET</code>) in your <code className="text-on-dark">.env</code> and restart.
-                        </p>
-                    </div>
-                )}
+                {/* Exchange panels — always all 3; disabled ones greyed-out */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {panels.map((ex) => (
+                        <ExchangePanel
+                            key={ex.name}
+                            exchange={ex.name}
+                            kind={ex.kind}
+                            label={ex.label}
+                            enabled={ex.enabled}
+                            onCreated={onOrderCreated}
+                        />
+                    ))}
+                </div>
 
                 {/* Order list spanning full width */}
                 <div className="space-y-4">
-                    <OrderFilter filters={state.filters} exchanges={exchanges} onChange={setFilters} />
+                    <OrderFilter filters={state.filters} exchanges={panels} onChange={setFilters} />
                     <OrderList
                         items={state.items}
                         loading={state.loading}
