@@ -170,7 +170,7 @@ ENTRYPOINT ["toad"]
 
 ### 新增：`.github/workflows/docker-build-pr.yml`
 
-在 PR 阶段执行**只构建、不推送**的 Docker build，避免 Dockerfile 错误在合入 main 后才暴露。
+在 PR / feature branch push 阶段执行**只构建、不推送**的 Docker build，避免 Dockerfile 错误在合入 main 后才暴露。同时加了 `workflow_dispatch` 以便手动调试 CI。
 
 ```yaml
 name: Docker Build (PR)
@@ -178,6 +178,13 @@ name: Docker Build (PR)
 on:
   pull_request:
     branches: [main]
+  # Run on every push to a feature branch so CI always triggers even when
+  # GitHub's pull_request event is delayed or suppressed.
+  push:
+    branches-ignore:
+      - main
+  # Allow manual trigger for testing / debugging CI issues.
+  workflow_dispatch:
 
 jobs:
   docker:
@@ -194,7 +201,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/toad
+          # PR builds do not push, so the image name is only used for local tags.
+          # Use a fixed name to avoid depending on secrets in fork PRs.
+          images: toad/toad
 
       - name: Build (no push)
         uses: docker/build-push-action@v6
