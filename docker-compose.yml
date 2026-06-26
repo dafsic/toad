@@ -6,6 +6,7 @@
 services:
   toad:
     image: ${DOCKER_USERNAME:-toad}/toad:${TOAD_TAG:-latest}
+    container_name: toad
     restart: unless-stopped
     ports:
       - "3000:3000"
