@@ -30,7 +30,13 @@ COPY --from=frontend /app/frontend/dist ./frontend/dist
 # 强制清掉 dummy 层残留的 toad 二进制与 fingerprint（依赖 rlib 保留）：
 # 否则 cargo 增量检测会认为无需重编译，导致 dummy 产物被直接打包进运行时镜像。
 # 之前 CI 失败正是这个原因——GHA 缓存命中 dummy 层后，真实 build 只用 0.43s 即 Finished。
-RUN cargo clean -p toad \
+#
+# 注意：`cargo clean -p toad` 在缓存命中场景下会输出 "Removed 0 files" 且不重建
+# （fingerprint 已被 BuildKit 还原而 cargo 误判 up-to-date），无法可靠清理。
+# 因此直接用 rm 删除 toad 的二进制与 fingerprint，强制 cargo 从真实 src/main.rs 重新编译 toad crate；
+# 依赖 rlib（target/release/deps、其它 .fingerprint）保留，仍是增量编译。
+RUN rm -f target/release/toad target/release/toad.d \
+    && rm -rf target/release/.fingerprint/toad-* \
     && cargo build --release \
     && test -s target/release/toad \
     && grep -aq "toad starting" target/release/toad
