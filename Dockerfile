@@ -27,7 +27,9 @@ COPY src/ ./src/
 COPY .sqlx/ ./.sqlx/
 # 将前端 dist/ 复制到 rust-embed 期望的位置
 COPY --from=frontend /app/frontend/dist ./frontend/dist
-RUN cargo build --release
+RUN cargo build --release \
+    && test -s target/release/toad \
+    && grep -aq "toad starting" target/release/toad
 
 # Stage 3: 最小运行时镜像
 FROM debian:bookworm-slim AS runtime
