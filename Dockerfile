@@ -27,7 +27,11 @@ COPY src/ ./src/
 COPY .sqlx/ ./.sqlx/
 # 将前端 dist/ 复制到 rust-embed 期望的位置
 COPY --from=frontend /app/frontend/dist ./frontend/dist
-RUN cargo build --release \
+# 强制清掉 dummy 层残留的 toad 二进制与 fingerprint（依赖 rlib 保留）：
+# 否则 cargo 增量检测会认为无需重编译，导致 dummy 产物被直接打包进运行时镜像。
+# 之前 CI 失败正是这个原因——GHA 缓存命中 dummy 层后，真实 build 只用 0.43s 即 Finished。
+RUN cargo clean -p toad \
+    && cargo build --release \
     && test -s target/release/toad \
     && grep -aq "toad starting" target/release/toad
 
