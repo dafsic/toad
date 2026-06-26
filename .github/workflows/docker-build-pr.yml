@@ -3,6 +3,13 @@ name: Docker Build (PR)
 on:
   pull_request:
     branches: [main]
+  # Run on every push to a feature branch so CI always triggers even when
+  # GitHub's pull_request event is delayed or suppressed.
+  push:
+    branches-ignore:
+      - main
+  # Allow manual trigger for testing / debugging CI issues.
+  workflow_dispatch:
 
 jobs:
   docker:
@@ -19,7 +26,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/toad
+          # PR builds do not push, so the image name is only used for local tags.
+          # Use a fixed name to avoid depending on secrets in fork PRs.
+          images: toad/toad
 
       - name: Build (no push)
         uses: docker/build-push-action@v6
