@@ -3,11 +3,6 @@ name: Docker Build (PR)
 on:
   pull_request:
     branches: [main]
-  # Run on every push to a feature branch so CI always triggers even when
-  # GitHub's pull_request event is delayed or suppressed.
-  push:
-    branches-ignore:
-      - main
   # Allow manual trigger for testing / debugging CI issues.
   workflow_dispatch:
 
