@@ -69,13 +69,22 @@ All modules implemented. Core layers (do not modify unless fixing a confirmed bu
 ## Environment Variables
 
 ```
-TELEGRAM_BOT_TOKEN, ALLOWED_TELEGRAM_USER_ID
-KRAKEN_API_KEY, KRAKEN_API_SECRET
-MEXC_API_KEY, MEXC_API_SECRET
+TELEGRAM_BOT_TOKEN, ALLOWED_TELEGRAM_USER_ID   (required)
+KRAKEN_API_KEY, KRAKEN_API_SECRET               (optional; empty = Kraken disabled)
+MEXC_API_KEY, MEXC_API_SECRET                   (optional; empty = MEXC disabled)
 HYPERLIQUID_PRIVATE_KEY, HYPERLIQUID_ACCOUNT_ADDRESS, HYPERLIQUID_TESTNET
+                                                (optional; empty private key = Hyperliquid disabled)
 JWT_SECRET (default: change-me-in-production)
 DATABASE_URL (default: sqlite:data/bot.db), SERVER_ADDR (default: 0.0.0.0:3000)
 ```
+
+### Exchange enablement
+An exchange is enabled only when its API credentials are non-empty. Disabled
+exchanges are never added to the `ExchangeRegistry`: no WebSocket subscription,
+no polling, and `POST /api/orders` / Telegram `/order` for them returns an error.
+`GET /api/price/:exchange` still returns quotes for any exchange (uses an
+independent public ticker client, no credentials needed). The frontend fetches
+`GET /api/exchanges` to render only enabled-exchange panels and filter options.
 
 ## Authentication
 
@@ -105,7 +114,7 @@ DATABASE_URL (default: sqlite:data/bot.db), SERVER_ADDR (default: 0.0.0.0:3000)
 - Uses `tokio::sync::oneshot` channel to notify waiting SSE connection when Bot verifies
 
 ### Routes
-- **Public**: `/api/auth/request`, `/api/auth/wait/:code`
+- **Public**: `/api/auth/request`, `/api/auth/wait/:code`, `/api/exchanges`, `/api/price/:exchange`, `/api/health`
 - **Protected** (requires auth middleware):
   - `POST /api/orders` — create order
   - `GET /api/orders` — list orders (cursor pagination + filters)

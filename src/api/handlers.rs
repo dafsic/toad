@@ -402,6 +402,46 @@ pub async fn health() -> &'static str {
     "ok"
 }
 
+/// `GET /api/exchanges` — list enabled exchanges (public, no auth).
+///
+/// 返回当前已启用（配置了 API 凭据）的交易所列表，供前端动态渲染面板与过滤器。
+/// 顺序固定为 kraken → hyperliquid → mexc_spot，保持 UI 稳定。
+#[derive(Debug, Serialize)]
+pub struct ExchangeInfo {
+    pub name: String,
+    /// "spot" | "perp"
+    pub kind: &'static str,
+    pub label: &'static str,
+}
+
+pub async fn list_exchanges(
+    State(state): State<AppState>,
+) -> Json<Vec<ExchangeInfo>> {
+    // 固定顺序 + 静态 label，避免 HashMap 迭代顺序导致 UI 抖动
+    const ORDER: &[(&str, &str)] = &[
+        ("kraken", "Kraken"),
+        ("hyperliquid", "Hyperliquid"),
+        ("mexc_spot", "MEXC"),
+    ];
+    let result: Vec<ExchangeInfo> = ORDER
+        .iter()
+        .filter_map(|(name, label)| {
+            state.adapters.get(*name).map(|adapter| {
+                let kind = match adapter.kind() {
+                    crate::exchange::ExchangeKind::Spot => "spot",
+                    crate::exchange::ExchangeKind::Perp => "perp",
+                };
+                ExchangeInfo {
+                    name: (*name).to_string(),
+                    kind,
+                    label,
+                }
+            })
+        })
+        .collect();
+    Json(result)
+}
+
 // ── 辅助转换 ──────────────────────────────────────────────────────────────────
 
 fn order_to_response(o: crate::db::order::Order) -> OrderResponse {

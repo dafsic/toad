@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react'
-import type { Exchange } from '@/types/order'
 
 interface PriceState {
     price: string | null
@@ -12,7 +11,7 @@ interface PriceState {
  * Uses backend proxy `/api/price/:exchange` to avoid CORS issues when the
  * browser talks directly to exchange APIs (MEXC does not send CORS headers).
  */
-export function usePrice(exchange: Exchange): PriceState {
+export function usePrice(exchange: string): PriceState {
     const [state, setState] = useState<PriceState>({ price: null, loading: true, error: false })
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 

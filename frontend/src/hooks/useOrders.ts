@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react'
-import type { Order, OrderStatus, Exchange, Side } from '@/types/order'
+import type { Order, OrderStatus, Side } from '@/types/order'
 import { listOrders } from '@/lib/api'
 
 export interface OrderFilters {
-    exchange: Exchange | ''
+    exchange: string
     side: Side | ''
     status: OrderStatus | ''
     is_auto: boolean | undefined

@@ -70,6 +70,7 @@ pub fn router(state: AppState) -> Router {
         .allow_credentials(false);
 
     Router::new()
+        .route("/api/exchanges", get(handlers::list_exchanges))
         .nest("/api/price", public_api)
         .nest("/api/auth", auth_routes)
         .nest("/api", protected_api)

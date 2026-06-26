@@ -1,16 +1,16 @@
-# Graph Report - toad  (2026-06-26)
+# Graph Report - toad  (2026-06-25)
 
 ## Corpus Check
-- 145 files · ~92,406 words
+- 143 files · ~90,405 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1395 nodes · 1835 edges · 140 communities (76 shown, 64 thin omitted)
+- 1355 nodes · 1779 edges · 136 communities (72 shown, 64 thin omitted)
 - Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 181 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1ddaf376`
+- Built from commit: `5b54947d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -147,10 +147,6 @@
 - [[_COMMUNITY_Community 133|Community 133]]
 - [[_COMMUNITY_Community 134|Community 134]]
 - [[_COMMUNITY_Community 135|Community 135]]
-- [[_COMMUNITY_Community 136|Community 136]]
-- [[_COMMUNITY_Community 137|Community 137]]
-- [[_COMMUNITY_Community 138|Community 138]]
-- [[_COMMUNITY_Community 139|Community 139]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `TailwindConfigGenerator` - 54 edges
@@ -211,15 +207,15 @@
 - **Toad backend REST API endpoint set** — backend_api_place_order, backend_api_list_orders, backend_api_cancel_order, backend_api_sse_events [EXTRACTED 0.95]
 - **Polling-driven fill detection and reverse order flow** — docs_refactor_poll_exchange, docs_refactor_handle_filled_order, docs_refactor_handle_fill, docs_refactor_update_fill_progress, docs_refactor_list_active_orders [EXTRACTED 0.85]
 
-## Communities (140 total, 64 thin omitted)
+## Communities (136 total, 64 thin omitted)
 
 ### Community 0 - "Core Architecture & Exchange Adapters"
-Cohesion: 0.11
-Nodes (24): AuthSession, AuthStore, Axum 0.8, CancellationToken (Graceful Shutdown), ExchangeAdapter Trait, ExchangeKind, ExchangeRegistry, GridEngine (+16 more)
+Cohesion: 0.17
+Nodes (15): AuthSession, AuthStore, Axum 0.8, CancellationToken (Graceful Shutdown), ExchangeRegistry, GridEngine, JWT Authentication (HS256, 8h), sqlx::migrate! Auto-migration (+7 more)
 
 ### Community 1 - "Frontend Exchange UI Components"
 Cohesion: 0.08
-Nodes (40): ExchangeLogo(), Props, ExchangePanel(), Props, Props, STATUSES, OrderRow(), Props (+32 more)
+Nodes (36): ExchangeLogo(), Props, ExchangePanel(), Props, Props, STATUSES, OrderRow(), Props (+28 more)
 
 ### Community 2 - "Order Database Layer"
 Cohesion: 0.11
@@ -242,8 +238,8 @@ Cohesion: 0.12
 Nodes (19): CreateOrderResult, MexcSpotAdapter, QueryOrderResult, WsOrderMsg, WsPrivateOrders, Method, Client, ExchangeAdapter (+11 more)
 
 ### Community 7 - "REST API Order Handlers"
-Cohesion: 0.17
-Nodes (28): bad_request(), cancel_order(), create_order(), CreateOrderRequest, delete_order(), ExchangeInfo, get_price(), internal() (+20 more)
+Cohesion: 0.18
+Nodes (26): bad_request(), cancel_order(), create_order(), CreateOrderRequest, delete_order(), get_price(), internal(), list_orders() (+18 more)
 
 ### Community 8 - "Frontend Dependencies"
 Cohesion: 0.07
@@ -386,8 +382,8 @@ Cohesion: 0.10
 Nodes (20): 10. `README.md` + `AGENTS.md`, 1. `src/db/migrations/002_partial_fill.sql`（新增）, 2. `src/db/order.rs`, 3. `src/exchange/mod.rs`, 4. `src/exchange/kraken.rs`, 5. `src/exchange/hyperliquid.rs`, 6. `src/engine/mod.rs`（核心重构）, 7. `src/api/handlers.rs` (+12 more)
 
 ### Community 100 - "React Script defer/async"
-Cohesion: 0.25
-Nodes (8): Breakpoint System, Custom Breakpoints, Max-Width Queries, Mobile-First Approach, Range Queries, Responsive State Variants, Tailwind CSS Responsive Design, Testing Checklist
+Cohesion: 0.06
+Nodes (31): 1. Mobile-First Design, 2. Consistent Breakpoint Usage, 3. Test at Breakpoint Boundaries, 4. Use Container for Content Width, 5. Progressive Enhancement, 6. Avoid Too Many Breakpoints, Best Practices, Breakpoint System (+23 more)
 
 ### Community 102 - "React Server Auth"
 Cohesion: 0.07
@@ -398,8 +394,8 @@ Cohesion: 0.08
 Nodes (24): Accessibility Patterns, Alternative: Tailwind-Only Setup, Best Practices, Common Patterns, Component Layer: shadcn/ui, Component Library Guide, Component + Styling Setup, Core Stack (+16 more)
 
 ### Community 105 - "Community 105"
-Cohesion: 0.09
-Nodes (22): Assisted Mode, Compile-time database requirement, Important Note, Order Status Flow, Polling Flow, Polling & Recovery on Restart, Telegram Bot Commands, 🐸 Toad Grid Bot (+14 more)
+Cohesion: 0.08
+Nodes (23): Assisted Mode, Compile-time database requirement, Important Note, License, Order Status Flow, Polling Flow, Polling & Recovery on Restart, Telegram Bot Commands (+15 more)
 
 ### Community 106 - "Community 106"
 Cohesion: 0.10
@@ -410,8 +406,8 @@ Cohesion: 0.11
 Nodes (19): Base Color Presets, Best Practices, Color Customization, Color Format, Component Customization, CSS Variable System, Customize Styles, Customize Variants (+11 more)
 
 ### Community 108 - "Community 108"
-Cohesion: 0.11
-Nodes (17): Agent Instructions — Toad Grid Bot, Authentication, Build Commands, Commit Attribution, Environment Variables, Exchange enablement, Flow, Graceful Shutdown (+9 more)
+Cohesion: 0.12
+Nodes (16): Agent Instructions — Toad Grid Bot, Authentication, Build Commands, Commit Attribution, Environment Variables, Flow, Graceful Shutdown, graphify (+8 more)
 
 ### Community 109 - "Community 109"
 Cohesion: 0.12
@@ -442,8 +438,8 @@ Cohesion: 0.20
 Nodes (9): 1. Eliminating Waterfalls (async), 2. Bundle Size Optimization (bundle), 3. Server-Side Performance (server), 4. Client-Side Data Fetching (client), 5. Re-render Optimization (rerender), 6. Rendering Performance (rendering), 7. JavaScript Performance (js), 8. Advanced Patterns (advanced) (+1 more)
 
 ### Community 116 - "Community 116"
-Cohesion: 0.06
-Nodes (31): 1. `src/api/handlers.rs`, 1. 本地构建, 2. `src/api/mod.rs`, 2. 检查镜像大小, 3. `Dockerfile`（完整重写）, 3. 本地运行 + 健康检查, 4. `.dockerignore`（扩展）, 4. 健康端点直接验证 (+23 more)
+Cohesion: 0.25
+Nodes (9): ExchangeAdapter Trait, ExchangeKind, Hyperliquid Adapter, hypersdk, Kraken Adapter, MEXC Adapter, Hyperliquid Perpetual (Isolated), Kraken Spot Exchange (+1 more)
 
 ### Community 117 - "Community 117"
 Cohesion: 0.22
@@ -485,28 +481,12 @@ Nodes (5): 8.1 Do Not Put Effect Events in Dependency Arrays, 8.2 Initialize App
 Cohesion: 0.83
 Nodes (3): Radix UI Primitives, WAI-ARIA, WCAG
 
-### Community 136 - "Community 136"
-Cohesion: 0.29
-Nodes (7): 1. Mobile-First Design, 2. Consistent Breakpoint Usage, 3. Test at Breakpoint Boundaries, 4. Use Container for Content Width, 5. Progressive Enhancement, 6. Avoid Too Many Breakpoints, Best Practices
-
-### Community 137 - "Community 137"
-Cohesion: 0.33
-Nodes (6): Layout Changes, Responsive Patterns, Spacing, Typography, Visibility, Width
-
-### Community 138 - "Community 138"
-Cohesion: 0.40
-Nodes (5): Card Grid, Common Responsive Layouts, Hero Section, Navigation, Sidebar Layout
-
-### Community 139 - "Community 139"
-Cohesion: 0.40
-Nodes (5): Common Responsive Utilities, Responsive Display, Responsive Order, Responsive Overflow, Responsive Position
-
 ## Ambiguous Edges - Review These
 - `Kraken Logo Image` → `Kraken Cryptocurrency Exchange (Spot)`  [AMBIGUOUS]
   frontend/public/kraken.png · relation: shares_data_with
 
 ## Knowledge Gaps
-- **593 isolated node(s):** `Path`, `Any`, `$schema`, `plugin`, `@opencode-ai/plugin` (+588 more)
+- **572 isolated node(s):** `Path`, `Any`, `$schema`, `plugin`, `@opencode-ai/plugin` (+567 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **64 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -516,14 +496,14 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `Kraken Logo Image` and `Kraken Cryptocurrency Exchange (Spot)`?**
   _Edge tagged AMBIGUOUS (relation: shares_data_with) - confidence is low._
 - **Why does `ckm:ui-styling Skill` connect `Community 114` to `Core Architecture & Exchange Adapters`, `Community 121`, `Community 126`, `Canvas Font Collection (S-Y) + Brand`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
-- **Why does `Toad Grid Bot` connect `Core Architecture & Exchange Adapters` to `Community 121`, `Community 114`, `Community 111`?**
-  _High betweenness centrality (0.035) - this node is a cross-community bridge._
+  _High betweenness centrality (0.047) - this node is a cross-community bridge._
+- **Why does `Toad Grid Bot` connect `Core Architecture & Exchange Adapters` to `Community 121`, `Community 114`, `Community 116`, `Community 111`?**
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
 - **Why does `React Best Practices` connect `Community 111` to `Core Architecture & Exchange Adapters`, `Community 109`, `Community 110`, `Community 112`, `Community 113`, `Community 118`, `Community 119`, `Community 120`, `Community 124`, `Community 125`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
 - **Are the 33 inferred relationships involving `TailwindConfigGenerator` (e.g. with `TestTailwindConfigGenerator` and `.test_add_breakpoints()`) actually correct?**
   _`TailwindConfigGenerator` has 33 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 23 inferred relationships involving `ShadcnInstaller` (e.g. with `TestShadcnInstaller` and `.test_add_all_components_dry_run()`) actually correct?**
   _`ShadcnInstaller` has 23 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Path`, `Handle shadcn/ui component installation.`, `Initialize installer.          Args:             project_root: Project root dire` to the rest of the system?**
-  _696 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _675 weakly-connected nodes found - possible documentation gaps or missing edges._

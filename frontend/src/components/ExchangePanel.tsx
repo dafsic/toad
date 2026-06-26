@@ -1,16 +1,20 @@
 import { useState, type FormEvent } from 'react'
 import { createOrder } from '@/lib/api'
-import { EXCHANGE_LABELS, SPOT_EXCHANGES, type Exchange, type Side } from '@/types/order'
+import type { Side } from '@/types/order'
 import { cn } from '@/lib/utils'
 import ExchangeLogo from '@/components/ExchangeLogo'
 import { usePrice } from '@/hooks/usePrice'
 
 interface Props {
-    exchange: Exchange
+    exchange: string
+    /** "spot" | "perp" — controls leverage slider visibility */
+    kind: 'spot' | 'perp'
+    /** Display name shown in the header */
+    label: string
     onCreated?: () => void
 }
 
-export default function ExchangePanel({ exchange, onCreated }: Props) {
+export default function ExchangePanel({ exchange, kind, label, onCreated }: Props) {
     const [side, setSide] = useState<Side>('buy')
     const [quantity, setQuantity] = useState('')
     const [price, setPrice] = useState('')
@@ -20,7 +24,7 @@ export default function ExchangePanel({ exchange, onCreated }: Props) {
     const [error, setError] = useState<string | null>(null)
     const [successId, setSuccessId] = useState<number | null>(null)
 
-    const isSpot = SPOT_EXCHANGES.includes(exchange)
+    const isSpot = kind === 'spot'
     const { price: marketPrice, loading: priceLoading, error: priceError } = usePrice(exchange)
 
     async function handleSubmit(e: FormEvent) {
@@ -57,7 +61,7 @@ export default function ExchangePanel({ exchange, onCreated }: Props) {
                 <div className="flex items-center gap-2.5">
                     <ExchangeLogo exchange={exchange} size={24} />
                     <span className="text-sm font-semibold text-on-dark font-display tracking-tight">
-                        {EXCHANGE_LABELS[exchange]}
+                        {label}
                     </span>
                 </div>
                 <div className="flex items-baseline gap-2">
