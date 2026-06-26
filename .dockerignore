@@ -1,24 +1,42 @@
-# 构建产物
+# Build artifacts
 target/
-frontend/node_modules/
-frontend/dist/
+**/target/
+**/node_modules/
+**/dist/
 
-# 运行时数据
+# Runtime data
 data/
 
-# 敏感配置
+# Sensitive config
 .env
+.env.local
+.env.*.local
 
-# 版本控制
+# Version control
 .git/
 .gitignore
 
-# IDE / 系统文件
+# IDE / system files
 .DS_Store
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# CI / 文档
+# CI / docs / graphs
 .github/
-AGENTS.md
-graphify-out/
+.gitlab-ci.yml
+.opencode/
+
+# Documentation (not needed in image)
+README.md
+DESIGN.md
+docs/
+LICENSE
+
+# Logs / coverage
+*.log
+coverage/
+
+# Test artifacts
+target-*/
