@@ -1,7 +1,7 @@
 # Multi-stage build for toad grid bot
 
 # Stage 0: cargo-chef base (used by planner + builder)
-FROM rust:1.85.0-bookworm AS chef
+FROM rust:1.96.0-bookworm AS chef
 RUN cargo install cargo-chef --version 0.1.77 --locked \
     && rm -rf $CARGO_HOME/registry
 

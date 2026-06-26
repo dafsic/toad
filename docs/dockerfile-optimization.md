@@ -84,7 +84,7 @@ let public_api = Router::new()
 ```dockerfile
 # Multi-stage build for toad grid bot
 # Stage 0: cargo-chef base (used by planner + builder)
-FROM rust:1.85.0-bookworm AS chef
+FROM rust:1.96.0-bookworm AS chef
 RUN cargo install cargo-chef --version 0.1.77 --locked \
     && rm -rf $CARGO_HOME/registry
 
@@ -142,7 +142,7 @@ ENTRYPOINT ["toad"]
 
 | 变更 | 原因 |
 |------|------|
-| `rust:1.85.0-bookworm` | 锁定 rustc 版本，避免"今天能 build 明天不能" |
+| `rust:1.96.0-bookworm` | 锁定 rustc 版本；cargo-chef 0.1.77 需要 1.96.0 才能编译 |
 | `node:22-alpine` | 当前 LTS（截至 2026-06），`node:24-alpine` 标签可用性需另行验证 |
 | `cargo-chef --version 0.1.77` | 锁定 cargo-chef 版本；否则 GHA 缓存可能长期复用旧版 |
 | 引入 `cargo chef` | 取代 dummy-build hack；依赖编译独立缓存层，源码变更不触发 deps 重编译 |
@@ -161,6 +161,7 @@ ENTRYPOINT ["toad"]
 
 - **非 root 用户**：保留 root 简化部署
 - **`rust:1-slim-bookworm`**：节省 ~1GB 但工具链调试成本高，不划算
+- **进一步降低 Rust 版本**：cargo-chef 0.1.77 在 1.85.0 上编译失败，已验证 1.96.0 可用
 - **多平台镜像（multi-arch）**：需修改 CI workflow，超出本次范围
 
 ---
@@ -288,6 +289,8 @@ target-*/
 | 改 `src/main.rs` 一行 | ~3-5 min（deps 增量编译） | **~10s**（cook 命中） |
 | 改 `Cargo.toml` 加新依赖 | ~5 min | ~5 min（recipe.json 变更触发 cook） |
 | 改 frontend 一行 | ~30s（仅 npm rebuild） | ~30s（持平） |
+
+> 注：`rust:1.96.0` 是依据 cargo-chef 0.1.77 的编译要求选定的；后续若升级 cargo-chef，可能需要同步调整 Rust 版本。
 
 ---
 
