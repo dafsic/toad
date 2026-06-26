@@ -4,6 +4,7 @@ import OrderFilter from '@/components/OrderFilter'
 import OrderList from '@/components/OrderList'
 import { useOrders } from '@/hooks/useOrders'
 import { useSSE } from '@/hooks/useSSE'
+import { useExchanges } from '@/hooks/useExchanges'
 import { LoginPage } from '@/pages/LoginPage'
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
     }, [])
 
     const { state, setFilters, loadMore, updateOrderStatus, onOrderCreated, fetchPage } = useOrders()
+    const { exchanges } = useExchanges()
 
     // Initial load
     useEffect(() => {
@@ -74,16 +76,30 @@ export default function App() {
             </header>
 
             <main className="p-6 lg:p-8 space-y-6 max-w-[1400px] mx-auto">
-                {/* Exchange panels — 3-up at xl, 2-up at lg, 1-up at mobile */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    <ExchangePanel exchange="kraken" onCreated={onOrderCreated} />
-                    <ExchangePanel exchange="hyperliquid" onCreated={onOrderCreated} />
-                    <ExchangePanel exchange="mexc_spot" onCreated={onOrderCreated} />
-                </div>
+                {/* Exchange panels — driven by enabled exchanges from backend */}
+                {exchanges.length > 0 ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {exchanges.map((ex) => (
+                            <ExchangePanel
+                                key={ex.name}
+                                exchange={ex.name}
+                                kind={ex.kind}
+                                label={ex.label}
+                                onCreated={onOrderCreated}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="bg-surface-elevated rounded-lg border border-hairline-dark p-8 text-center">
+                        <p className="text-sm text-on-dark-mute">
+                            No exchanges enabled. Set API credentials (e.g. <code className="text-on-dark">KRAKEN_API_KEY</code> / <code className="text-on-dark">KRAKEN_API_SECRET</code>) in your <code className="text-on-dark">.env</code> and restart.
+                        </p>
+                    </div>
+                )}
 
                 {/* Order list spanning full width */}
                 <div className="space-y-4">
-                    <OrderFilter filters={state.filters} onChange={setFilters} />
+                    <OrderFilter filters={state.filters} exchanges={exchanges} onChange={setFilters} />
                     <OrderList
                         items={state.items}
                         loading={state.loading}

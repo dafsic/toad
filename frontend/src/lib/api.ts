@@ -1,4 +1,4 @@
-import type { Order, CreateOrderRequest, ListOrdersQuery } from '@/types/order'
+import type { Order, CreateOrderRequest, ListOrdersQuery, ExchangeInfo } from '@/types/order'
 
 const BASE = '/api'
 
@@ -17,6 +17,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export interface PageResponse {
     items: Order[]
     next_cursor: number | null
+}
+
+/** GET /api/exchanges — list enabled exchanges (public, no auth) */
+export function listExchanges(): Promise<ExchangeInfo[]> {
+    return request('/exchanges')
 }
 
 /** POST /api/orders — manual order placement */

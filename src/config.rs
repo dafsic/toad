@@ -17,17 +17,17 @@ pub struct Config {
     pub allowed_telegram_user_id: u64,
 
     // ── Kraken ──────────────────────────────────────────────────────────────
-    /// Kraken API Key
-    #[arg(long, env = "KRAKEN_API_KEY")]
+    /// Kraken API Key（留空则不启用 Kraken 交易所）
+    #[arg(long, env = "KRAKEN_API_KEY", default_value = "")]
     pub kraken_api_key: String,
 
-    /// Kraken API Secret（Base64 编码）
-    #[arg(long, env = "KRAKEN_API_SECRET")]
+    /// Kraken API Secret（Base64 编码；留空则不启用 Kraken 交易所）
+    #[arg(long, env = "KRAKEN_API_SECRET", default_value = "")]
     pub kraken_api_secret: String,
 
     // ── Hyperliquid ─────────────────────────────────────────────────────────
-    /// Hyperliquid API 钱包私钥（十六进制，可选 0x 前缀）
-    #[arg(long, env = "HYPERLIQUID_PRIVATE_KEY")]
+    /// Hyperliquid API 钱包私钥（十六进制，可选 0x 前缀；留空则不启用 Hyperliquid）
+    #[arg(long, env = "HYPERLIQUID_PRIVATE_KEY", default_value = "")]
     pub hyperliquid_private_key: String,
 
     /// Hyperliquid 主账户地址（API agent wallet 模式时必填；普通钱包留空）
@@ -39,12 +39,12 @@ pub struct Config {
     pub hyperliquid_testnet: bool,
 
     // ── MEXC ───────────────────────────────────────────────────────────────
-    /// MEXC API Key
-    #[arg(long, env = "MEXC_API_KEY")]
+    /// MEXC API Key（留空则不启用 MEXC 交易所）
+    #[arg(long, env = "MEXC_API_KEY", default_value = "")]
     pub mexc_api_key: String,
 
-    /// MEXC API Secret
-    #[arg(long, env = "MEXC_API_SECRET")]
+    /// MEXC API Secret（留空则不启用 MEXC 交易所）
+    #[arg(long, env = "MEXC_API_SECRET", default_value = "")]
     pub mexc_api_secret: String,
 
     // ── Server ──────────────────────────────────────────────────────────────

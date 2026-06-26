@@ -1,12 +1,21 @@
+// Exchange identifiers are now dynamic (driven by GET /api/exchanges),
+// so the union is relaxed to string. The known set is kept for compatibility.
 export type Exchange = 'kraken' | 'hyperliquid' | 'mexc_spot'
 export type Side = 'buy' | 'sell'
 export type OrderStatus = 'pending' | 'open' | 'partially_filled' | 'filled' | 'cancelled' | 'failed'
 
+/** Enabled-exchange descriptor returned by GET /api/exchanges */
+export interface ExchangeInfo {
+    name: string
+    kind: 'spot' | 'perp'
+    label: string
+}
+
 /** Spot exchanges: UI uses this to hide leverage slider (spot leverage is fixed at 1) */
-export const SPOT_EXCHANGES: Exchange[] = ['kraken', 'mexc_spot']
+export const SPOT_EXCHANGES: string[] = ['kraken', 'mexc_spot']
 
 /** Display names for exchanges */
-export const EXCHANGE_LABELS: Record<Exchange, string> = {
+export const EXCHANGE_LABELS: Record<string, string> = {
     kraken: 'Kraken',
     hyperliquid: 'Hyperliquid',
     mexc_spot: 'MEXC',
@@ -14,7 +23,7 @@ export const EXCHANGE_LABELS: Record<Exchange, string> = {
 
 export interface Order {
     id: number
-    exchange: Exchange
+    exchange: string
     symbol: string
     side: Side
     quantity: number
@@ -34,7 +43,7 @@ export interface Order {
 }
 
 export interface CreateOrderRequest {
-    exchange: Exchange
+    exchange: string
     side: Side
     quantity: number
     price: number
@@ -44,7 +53,7 @@ export interface CreateOrderRequest {
 }
 
 export interface ListOrdersQuery {
-    exchange?: Exchange
+    exchange?: string
     side?: Side
     status?: OrderStatus
     is_auto?: boolean

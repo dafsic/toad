@@ -53,33 +53,53 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("init db")?;
 
-    // 4. 构建交易所适配器，组装成统一注册表
-    let kraken: Arc<dyn exchange::ExchangeAdapter> =
-        Arc::new(exchange::kraken::KrakenAdapter::new(
-            config.kraken_api_key.clone(),
-            config.kraken_api_secret.clone(),
-        ));
-
-    let hyperliquid: Arc<dyn exchange::ExchangeAdapter> = Arc::new(
-        exchange::hyperliquid::HyperliquidAdapter::new(
-            &config.hyperliquid_private_key,
-            &config.hyperliquid_account_address,
-            config.hyperliquid_testnet,
-        )
-        .await
-        .context("init hyperliquid adapter")?,
-    );
-
-    let mexc_spot: Arc<dyn exchange::ExchangeAdapter> =
-        Arc::new(exchange::mexc::MexcSpotAdapter::new(
-            config.mexc_api_key.clone(),
-            config.mexc_api_secret.clone(),
-        ));
-
+    // 4. 构建交易所适配器，组装成统一注册表。
+    //    各交易所的 API key/secret 为空时跳过构建，即不启用该交易所的交易与监听。
     let mut adapters = exchange::ExchangeRegistry::new();
-    adapters.insert("kraken".to_string(), Arc::clone(&kraken));
-    adapters.insert("hyperliquid".to_string(), Arc::clone(&hyperliquid));
-    adapters.insert("mexc_spot".to_string(), Arc::clone(&mexc_spot));
+
+    if !config.kraken_api_key.is_empty() && !config.kraken_api_secret.is_empty() {
+        let kraken: Arc<dyn exchange::ExchangeAdapter> =
+            Arc::new(exchange::kraken::KrakenAdapter::new(
+                config.kraken_api_key.clone(),
+                config.kraken_api_secret.clone(),
+            ));
+        adapters.insert("kraken".to_string(), kraken);
+        tracing::info!("kraken enabled");
+    } else {
+        tracing::info!("kraken disabled (empty KRAKEN_API_KEY / KRAKEN_API_SECRET)");
+    }
+
+    if !config.hyperliquid_private_key.is_empty() {
+        let hyperliquid: Arc<dyn exchange::ExchangeAdapter> = Arc::new(
+            exchange::hyperliquid::HyperliquidAdapter::new(
+                &config.hyperliquid_private_key,
+                &config.hyperliquid_account_address,
+                config.hyperliquid_testnet,
+            )
+            .await
+            .context("init hyperliquid adapter")?,
+        );
+        adapters.insert("hyperliquid".to_string(), hyperliquid);
+        tracing::info!("hyperliquid enabled");
+    } else {
+        tracing::info!("hyperliquid disabled (empty HYPERLIQUID_PRIVATE_KEY)");
+    }
+
+    if !config.mexc_api_key.is_empty() && !config.mexc_api_secret.is_empty() {
+        let mexc_spot: Arc<dyn exchange::ExchangeAdapter> =
+            Arc::new(exchange::mexc::MexcSpotAdapter::new(
+                config.mexc_api_key.clone(),
+                config.mexc_api_secret.clone(),
+            ));
+        adapters.insert("mexc_spot".to_string(), mexc_spot);
+        tracing::info!("mexc_spot enabled");
+    } else {
+        tracing::info!("mexc_spot disabled (empty MEXC_API_KEY / MEXC_API_SECRET)");
+    }
+
+    if adapters.is_empty() {
+        tracing::warn!("no exchanges enabled — only Telegram/price-quote/web UI will work");
+    }
     let adapters = Arc::new(adapters);
 
     // 5. 创建全局关闭信号 token

@@ -1,9 +1,10 @@
 import type { OrderFilters } from '@/hooks/useOrders'
-import type { Exchange, OrderStatus, Side } from '@/types/order'
+import type { ExchangeInfo, OrderStatus, Side } from '@/types/order'
 import { cn } from '@/lib/utils'
 
 interface Props {
     filters: OrderFilters
+    exchanges: ExchangeInfo[]
     onChange: (f: OrderFilters) => void
 }
 
@@ -20,7 +21,7 @@ const STATUSES: { value: OrderStatus | ''; label: string }[] = [
 const selectClass =
     'rounded-md border border-hairline-dark bg-surface-elevated px-3 py-2 text-sm text-on-dark outline-none focus:border-primary focus:ring-2 focus:ring-primary/30 transition-colors appearance-none cursor-pointer'
 
-export default function OrderFilter({ filters, onChange }: Props) {
+export default function OrderFilter({ filters, exchanges, onChange }: Props) {
     function set<K extends keyof OrderFilters>(key: K, value: OrderFilters[K]) {
         onChange({ ...filters, [key]: value })
     }
@@ -45,16 +46,16 @@ export default function OrderFilter({ filters, onChange }: Props) {
                 ))}
             </div>
 
-            {/* Exchange filter */}
+            {/* Exchange filter — options driven by enabled exchanges */}
             <select
                 value={filters.exchange}
-                onChange={e => set('exchange', e.target.value as Exchange | '')}
+                onChange={e => set('exchange', e.target.value)}
                 className={selectClass}
             >
                 <option value="">All exchanges</option>
-                <option value="kraken">Kraken</option>
-                <option value="hyperliquid">Hyperliquid</option>
-                <option value="mexc_spot">MEXC</option>
+                {exchanges.map(ex => (
+                    <option key={ex.name} value={ex.name}>{ex.label}</option>
+                ))}
             </select>
 
             {/* Side filter */}
