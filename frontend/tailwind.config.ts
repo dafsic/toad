@@ -11,10 +11,10 @@ export default {
                 sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
             },
             colors: {
-                // Brand
-                primary: '#494fdf',
-                'primary-bright': '#4f55f1',
-                'primary-deep': '#3a40c4',
+                // Brand — Monero orange (#FF6600)
+                primary: '#FF6600',
+                'primary-bright': '#ff7a1f',
+                'primary-deep': '#cc4f00',
                 'on-primary': '#ffffff',
 
                 // Dark surfaces (canvas-dark mode)
@@ -62,14 +62,14 @@ export default {
                 secondary: '#16181a',
                 muted: '#0a0a0a',
                 'muted-foreground': 'rgba(255,255,255,0.72)',
-                ring: '#494fdf',
-                xmr: '#494fdf',
+                ring: '#FF6600',
+                xmr: '#FF6600',
 
                 // Trading semantic shortcuts (mapped onto DESIGN palette)
                 buy: '#428619',
-                sell: '#e23b4a',
+                sell: '#FF6600',
                 'buy-hover': '#3a7516',
-                'sell-hover': '#cf2f3d',
+                'sell-hover': '#cc4f00',
             },
             borderRadius: {
                 none: '0px',
