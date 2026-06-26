@@ -397,6 +397,11 @@ pub struct PriceResponse {
     pub price: String,
 }
 
+/// `GET /api/health` — public health check for Docker HEALTHCHECK / load balancers.
+pub async fn health() -> &'static str {
+    "ok"
+}
+
 // ── 辅助转换 ──────────────────────────────────────────────────────────────────
 
 fn order_to_response(o: crate::db::order::Order) -> OrderResponse {

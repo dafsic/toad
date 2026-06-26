@@ -1,55 +1,55 @@
-# ── 多阶段构建 ────────────────────────────────────────────────────────────────
+# Multi-stage build for toad grid bot
 
-# Stage 1: 构建前端
-FROM node:24-alpine AS frontend
+# Stage 0: cargo-chef base (used by planner + builder)
+FROM rust:1.85.0-bookworm AS chef
+RUN cargo install cargo-chef --version 0.1.77 --locked \
+    && rm -rf $CARGO_HOME/registry
+
+# Stage 1: build the React frontend
+FROM node:22-alpine AS frontend
 WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm ci
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 
-# Stage 2: 构建 Rust 后端（并嵌入前端产物）
-# 使用 Debian (glibc) 而非 Alpine (musl)：rust:1-bookworm 基于 buildpack-deps，
-# 已内置 libssl-dev / pkg-config，避免 openssl-sys 在 musl 下的编译问题。
-FROM rust:1-bookworm AS backend
-# sqlx::query! 编译时宏使用离线数据（.sqlx/），无需构建期连接数据库
-ENV SQLX_OFFLINE=true
+# Stage 2: generate the dependency recipe (caching key)
+FROM chef AS planner
 WORKDIR /app
-
-# 先缓存依赖：用 dummy src 编译依赖（失败无妨，依赖已缓存）
 COPY Cargo.toml Cargo.lock ./
-RUN mkdir src && echo "fn main() {}" > src/main.rs \
-    && cargo build --release || true \
-    && rm -rf src
+RUN cargo chef prepare --recipe-path recipe.json
 
-# 编译真实源码
-COPY src/ ./src/
-COPY .sqlx/ ./.sqlx/
-# 将前端 dist/ 复制到 rust-embed 期望的位置
+# Stage 3: cook dependencies (cached until recipe.json changes),
+#           then build the real binary
+FROM chef AS builder
+WORKDIR /app
+# sqlx::query! macros use offline query metadata (.sqlx/); no DB connection at build time
+ENV SQLX_OFFLINE=true
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY Cargo.toml Cargo.lock ./
+COPY src ./src
+COPY .sqlx ./.sqlx
 COPY --from=frontend /app/frontend/dist ./frontend/dist
-# 强制清掉 dummy 层残留的 toad 二进制与 fingerprint（依赖 rlib 保留）：
-# 否则 cargo 增量检测会认为无需重编译，导致 dummy 产物被直接打包进运行时镜像。
-# 之前 CI 失败正是这个原因——GHA 缓存命中 dummy 层后，真实 build 只用 0.43s 即 Finished。
-#
-# 注意：`cargo clean -p toad` 在缓存命中场景下会输出 "Removed 0 files" 且不重建
-# （fingerprint 已被 BuildKit 还原而 cargo 误判 up-to-date），无法可靠清理。
-# 因此直接用 rm 删除 toad 的二进制与 fingerprint，强制 cargo 从真实 src/main.rs 重新编译 toad crate；
-# 依赖 rlib（target/release/deps、其它 .fingerprint）保留，仍是增量编译。
-RUN rm -f target/release/toad target/release/toad.d \
-    && rm -rf target/release/.fingerprint/toad-* \
-    && cargo build --release \
-    && test -s target/release/toad \
-    && grep -aq "toad starting" target/release/toad
+RUN cargo build --release --locked --bin toad
 
-# Stage 3: 最小运行时镜像
+# Stage 4: minimal runtime image
 FROM debian:bookworm-slim AS runtime
+LABEL org.opencontainers.image.source="https://github.com/anomalyco/toad" \
+      org.opencontainers.image.licenses="MIT"
+
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=backend /app/target/release/toad /usr/local/bin/toad
+
+COPY --from=builder /app/target/release/toad /usr/local/bin/toad
 
 VOLUME ["/data"]
 EXPOSE 3000
 ENV DATABASE_URL=/data/bot.db
 
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:3000/api/health || exit 1
+
+STOPSIGNAL SIGTERM
 ENTRYPOINT ["toad"]

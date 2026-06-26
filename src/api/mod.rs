@@ -40,6 +40,7 @@ pub struct AppState {
 pub fn router(state: AppState) -> Router {
     // 公开行情路由（无需认证）
     let public_api = Router::new()
+        .route("/health", get(handlers::health))
         .route("/{exchange}", get(handlers::get_price));
 
     // 认证路由（无需认证）
